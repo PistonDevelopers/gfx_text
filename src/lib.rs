@@ -69,7 +69,7 @@ pub struct Renderer<R: Resources> {
     params: ShaderParams<R>,
 }
 
-/// Renderer builder instance.
+/// Text renderer builder instance.
 pub struct RendererBuilder<'r, R: Resources, F: Factory<R> + 'r> {
     factory: &'r mut F,
     font_size: u8,
@@ -89,7 +89,7 @@ pub struct RendererBuilder<'r, R: Resources, F: Factory<R> + 'r> {
     _r: PhantomData<R>,
 }
 
-/// Create a new renderer builder.
+/// Create a new text renderer builder.
 pub fn new<'r, R: Resources, F: Factory<R>> (factory: &'r mut F) -> RendererBuilder<'r, R, F> {
     // Default renderer settings.
     RendererBuilder {
