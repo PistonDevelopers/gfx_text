@@ -1,7 +1,4 @@
-#![feature(custom_attribute)]
-#![feature(plugin)]
-#![plugin(gfx_macros)]
-
+#[macro_use]
 extern crate gfx;
 extern crate freetype;
 
@@ -191,6 +188,7 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
                 color: (font_texture, Some(sampler)),
                 screen_size: [0.0, 0.0],
                 proj: DEFAULT_PROJECTION,
+                _r: PhantomData,
             },
         })
     }
@@ -219,8 +217,8 @@ impl<R: Resources> Renderer<R> {
             Err(world_pos) => ([0, 0], world_pos, 0),
         };
         let (mut x, y) = (screen_pos[0] as f32, screen_pos[1] as f32);
-        let mut index = self.vertex_data.len() as u32;
         for ch in text.chars() {
+            let index = self.vertex_data.len() as u32;
             let ch_info = match self.font_bitmap.find_char(ch) {
                 Some(info) => info,
                 // Skip unknown chars from text string. Probably it would be
@@ -282,7 +280,6 @@ impl<R: Resources> Renderer<R> {
             self.index_data.push(index + 1);
             self.index_data.push(index + 2);
 
-            index += 4;
             x += ch_info.x_advance as f32;
         }
     }
@@ -386,8 +383,6 @@ fn grow_buffer_size(mut current_size: usize, desired_size: usize) -> usize {
     current_size
 }
 
-// Helper from FactoryExt with the same name create minmaps and we don't need
-// them.
 fn create_texture_rgba8_static<R: Resources, F: Factory<R>>(
     factory: &mut F,
     width: u16,
@@ -404,33 +399,19 @@ fn create_texture_rgba8_static<R: Resources, F: Factory<R>>(
     Ok(texture)
 }
 
-// TODO(Kagami): Use simple macroses instead, see
-// <https://github.com/gfx-rs/gfx-rs/pull/725> for details.
+gfx_vertex!( Vertex {
+    a_Pos@ pos: [f32; 2],
+    a_TexCoord@ tex: [f32; 2],
+    a_World_Pos@ world_pos: [f32; 3],
+    a_Screen_Rel@ screen_rel: i32,  // Should be bool but gfx-rs doesn't support it
+    a_Color@ color: [f32; 4],
+});
 
-#[vertex_format]
-#[derive(Debug, Clone, Copy)]
-struct Vertex {
-    #[name = "a_Pos"]
-    pos: [f32; 2],
-    #[name = "a_TexCoord"]
-    tex: [f32; 2],
-    #[name = "a_World_Pos"]
-    world_pos: [f32; 3],
-    #[name = "a_Screen_Rel"]
-    screen_rel: i32,  // Should be bool but gfx-rs doesn't support it
-    #[name = "a_Color"]
-    color: [f32; 4],
-}
-
-#[shader_param]
-struct ShaderParams<R: Resources> {
-    #[name = "t_Color"]
-    color: TextureParam<R>,
-    #[name = "u_Screen_Size"]
-    screen_size: [f32; 2],
-    #[name = "u_Proj"]
-    proj: [[f32; 4]; 4],
-}
+gfx_parameters!( ShaderParams/ParamsLink {
+    t_Color@ color: TextureParam<R>,
+    u_Screen_Size@ screen_size: [f32; 2],
+    u_Proj@ proj: [[f32; 4]; 4],
+});
 
 const VERTEX_SRC: &'static [u8] = b"
     #version 150 core

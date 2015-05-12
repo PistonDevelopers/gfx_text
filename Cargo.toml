@@ -6,9 +6,6 @@ authors = ["Kagami Hiiragi <kagami@genshiken.org>"]
 [dependencies.gfx]
 git = "https://github.com/gfx-rs/gfx-rs"
 
-[dependencies.gfx_macros]
-git = "https://github.com/gfx-rs/gfx_macros"
-
 [dependencies.freetype-rs]
 git = "https://github.com/PistonDevelopers/freetype-rs"
 
