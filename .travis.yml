@@ -2,3 +2,8 @@ language: rust
 rust:
   - nightly
   - 1.0.0-beta.4
+script:
+  - cargo test -v
+  - cargo doc -v
+after_success:
+  - curl http://docs.piston.rs/travis-doc-upload.sh | sh
