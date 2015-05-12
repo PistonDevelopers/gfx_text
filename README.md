@@ -2,6 +2,8 @@
 
 Library for drawing text for [gfx-rs](https://github.com/gfx-rs/gfx-rs) graphics API. Uses [freetype-rs](https://github.com/PistonDevelopers/freetype-rs) underneath.
 
+[Documentation](http://docs.piston.rs/gfx_text/gfx_text/)
+
 ## Usage
 
 ```rust
