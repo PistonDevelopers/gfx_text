@@ -25,6 +25,10 @@ text.draw_end(&mut canvas);
 
 See [this example](./examples/styles.rs) on how to draw text in various styles: different sizes, colors, fonts, etc.
 
+Output:
+
+[![](https://raw.githubusercontent.com/PistonDevelopers/gfx_text/images/styles.png)](https://raw.githubusercontent.com/PistonDevelopers/gfx_text/images/styles.png)
+
 ## License
 
 * gfx_text licensed under [MIT License](./LICENSE)
