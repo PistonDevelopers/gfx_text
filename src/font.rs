@@ -2,7 +2,6 @@
 //! Generates raw texture data for the given font and collects information
 //! about available font characters to map them into texture.
 
-use std::io;
 use std::cmp::max;
 use std::iter::{repeat, FromIterator};
 use std::collections::{HashMap, HashSet};
@@ -32,14 +31,11 @@ pub struct BitmapChar {
     pub tex_height: f32,
 }
 
+/// Represents possible errors that may occur during the font loading.
 #[derive(Debug)]
 pub enum FontError {
-    IoError(io::Error),
+    /// FreeType library error
     FreetypeError(ft::Error),
-}
-
-impl From<io::Error> for FontError {
-    fn from(e: io::Error) -> FontError { FontError::IoError(e) }
 }
 
 impl From<ft::Error> for FontError {

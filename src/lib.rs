@@ -1,3 +1,9 @@
+//! A library for drawing text for gfx-rs graphics API.
+//! Uses freetype-rs underneath to former the font bitmap texture and collect
+//! information about face glyphs.
+
+#![deny(missing_docs)]
+
 #[macro_use]
 extern crate gfx;
 extern crate freetype;
@@ -9,7 +15,6 @@ use gfx::{PrimitiveType, ProgramError, DrawError};
 use gfx::traits::{FactoryExt, ToSlice, Stream};
 use gfx::handle::{Program, Buffer, IndexBuffer, Texture};
 use gfx::batch::Error as BatchError;
-use gfx::shade::TextureParam;
 use gfx::tex::{self, TextureError};
 mod font;
 use font::BitmapFont;
@@ -26,10 +31,15 @@ const DEFAULT_PROJECTION: [[f32; 4]; 4] = [
     [0.0, 0.0, 0.0, 1.0],
 ];
 
+/// General error type returned by the library. Wraps other errors which may
+/// occur during some operations.
 #[derive(Debug)]
 pub enum Error {
+    /// Program linking error
     ProgramError(ProgramError),
+    /// Font loading error
     FontError(FontError),
+    /// Texture creation/updation error
     TextureError(TextureError),
 }
 
@@ -47,6 +57,7 @@ impl From<TextureError> for Error {
 
 type IndexT = u32;
 
+/// Text renderer instance.
 pub struct Renderer<R: Resources> {
     program: Program<R>,
     draw_state: gfx::DrawState,
@@ -58,6 +69,7 @@ pub struct Renderer<R: Resources> {
     params: ShaderParams<R>,
 }
 
+/// Renderer builder instance.
 pub struct RendererBuilder<'r, R: Resources, F: Factory<R> + 'r> {
     factory: &'r mut F,
     font_size: u8,
@@ -77,7 +89,7 @@ pub struct RendererBuilder<'r, R: Resources, F: Factory<R> + 'r> {
     _r: PhantomData<R>,
 }
 
-/// Create a new text renderer builder.
+/// Create a new renderer builder.
 pub fn new<'r, R: Resources, F: Factory<R>> (factory: &'r mut F) -> RendererBuilder<'r, R, F> {
     // Default renderer settings.
     RendererBuilder {
@@ -399,19 +411,26 @@ fn create_texture_rgba8_static<R: Resources, F: Factory<R>>(
     Ok(texture)
 }
 
-gfx_vertex!( Vertex {
-    a_Pos@ pos: [f32; 2],
-    a_TexCoord@ tex: [f32; 2],
-    a_World_Pos@ world_pos: [f32; 3],
-    a_Screen_Rel@ screen_rel: i32,  // Should be bool but gfx-rs doesn't support it
-    a_Color@ color: [f32; 4],
-});
+// Hack to hide shader structs from the library user.
+mod shader_structs {
+    use gfx::shade::TextureParam;
 
-gfx_parameters!( ShaderParams/ParamsLink {
-    t_Color@ color: TextureParam<R>,
-    u_Screen_Size@ screen_size: [f32; 2],
-    u_Proj@ proj: [[f32; 4]; 4],
-});
+    gfx_vertex!( Vertex {
+        a_Pos@ pos: [f32; 2],
+        a_TexCoord@ tex: [f32; 2],
+        a_World_Pos@ world_pos: [f32; 3],
+        // Should be bool but gfx-rs doesn't support it.
+        a_Screen_Rel@ screen_rel: i32,
+        a_Color@ color: [f32; 4],
+    });
+
+    gfx_parameters!( ShaderParams/ParamsLink {
+        t_Color@ color: TextureParam<R>,
+        u_Screen_Size@ screen_size: [f32; 2],
+        u_Proj@ proj: [[f32; 4]; 4],
+    });
+}
+use shader_structs::{Vertex, ShaderParams};
 
 const VERTEX_SRC: &'static [u8] = b"
     #version 150 core
