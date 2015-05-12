@@ -2,9 +2,9 @@
 
 Library for drawing text for [gfx-rs](https://github.com/gfx-rs/gfx-rs) graphics API. Uses [freetype-rs](https://github.com/PistonDevelopers/freetype-rs) underneath.
 
-[Documentation](http://docs.piston.rs/gfx_text/gfx_text/)
-
 ## Usage
+
+Basic usage:
 
 ```rust
 // Initialize text renderer.
@@ -21,7 +21,7 @@ text.draw(
 text.draw_end(&mut canvas);
 ```
 
-*TODO:* Proper docs.
+See [API documentation](http://docs.piston.rs/gfx_text/gfx_text/) for overview of all available methods.
 
 ## Examples
 
