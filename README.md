@@ -5,17 +5,17 @@ Library for drawing text for [gfx-rs](https://github.com/gfx-rs/gfx-rs) graphics
 ## Usage
 
 ```rust
-# Initialize text renderer.
+// Initialize text renderer.
 let mut text = gfx_text::new(&mut canvas.factory).unwrap();
 
-# Draw some text 10 pixels down and right from the top left screen corner.
+// Draw some text 10 pixels down and right from the top left screen corner.
 text.draw(
     "The quick brown fox jumps over the lazy dog",  // Text to draw
     [10, 10],                                       // Position
     [0.65, 0.16, 0.16, 1.0],                        // Text color
 );
 
-# Render the final batch.
+// Render the final batch.
 text.draw_end(&mut canvas);
 ```
 
