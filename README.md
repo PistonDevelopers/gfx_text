@@ -10,6 +10,8 @@ Basic usage:
 // Initialize text renderer.
 let mut text = gfx_text::new(&mut canvas.factory).unwrap();
 
+// In render loop:
+
 // Draw some text 10 pixels down and right from the top left screen corner.
 text.draw(
     "The quick brown fox jumps over the lazy dog",  // Text to draw
