@@ -28,5 +28,5 @@ See [this example](./examples/styles.rs) on how to draw text in various styles: 
 ## License
 
 * gfx_text licensed under [MIT License](./LICENSE)
-* Included by default Noto Sans font uses [Apache License 2.0](./assets/LICENCE.txt)
-* Ubuntu Font used in examples has [Ubuntu Font Licence 1.0](./examples/assets/LICENCE.txt)
+* Included by default Noto Sans font uses [Apache License 2.0](./assets/LICENSE.txt)
+* Ubuntu Font used in examples has [Ubuntu Font Licence 1.0](./examples/assets/LICENSE.txt)
