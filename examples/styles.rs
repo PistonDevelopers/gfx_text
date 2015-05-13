@@ -5,7 +5,7 @@ extern crate gfx_text;
 
 use gfx::traits::{IntoCanvas, Stream};
 use gfx_window_glutin as gfxw;
-use glutin::{WindowBuilder, Event, VirtualKeyCode};
+use glutin::{WindowBuilder, Event, VirtualKeyCode, GL_CORE};
 
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BROWN: [f32; 4] = [0.65, 0.16, 0.16, 1.0];
@@ -18,6 +18,7 @@ fn main() {
         let window = WindowBuilder::new()
             .with_dimensions(640, 480)
             .with_title(format!("gfx_text example"))
+            .with_gl(GL_CORE)
             .build()
             .unwrap();
         gfxw::init(window).into_canvas()
