@@ -89,23 +89,28 @@ pub struct RendererBuilder<'r, R: Resources, F: Factory<R> + 'r> {
     _r: PhantomData<R>,
 }
 
-/// Create a new text renderer builder.
-pub fn new<'r, R: Resources, F: Factory<R>> (factory: &'r mut F) -> RendererBuilder<'r, R, F> {
-    // Default renderer settings.
-    RendererBuilder {
-        factory: factory,
-        font_size: DEFAULT_FONT_SIZE,
-        font_path: None,  // Default font will be used
-        font_data: DEFAULT_FONT_DATA,
-        outline_width: None,  // No outline by default
-        outline_color: DEFAULT_OUTLINE_COLOR,
-        buffer_size: DEFAULT_BUFFER_SIZE,
-        chars: None,  // Place all available font chars into texture
-        _r: PhantomData,
-    }
+/// Create a new text renderer builder. Alias for `RendererBuilder::new`.
+pub fn new<'r, R: Resources, F: Factory<R>>(factory: &'r mut F) -> RendererBuilder<'r, R, F> {
+    RendererBuilder::new(factory)
 }
 
 impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
+    /// Create a new text renderer builder.
+    pub fn new(factory: &'r mut F) -> RendererBuilder<'r, R, F> {
+        // Default renderer settings.
+        RendererBuilder {
+            factory: factory,
+            font_size: DEFAULT_FONT_SIZE,
+            font_path: None,  // Default font will be used
+            font_data: DEFAULT_FONT_DATA,
+            outline_width: None,  // No outline by default
+            outline_color: DEFAULT_OUTLINE_COLOR,
+            buffer_size: DEFAULT_BUFFER_SIZE,
+            chars: None,  // Place all available font chars into texture
+            _r: PhantomData,
+        }
+    }
+
     /// Specify custom size.
     pub fn with_size(mut self, size: u8) -> RendererBuilder<'r, R, F> {
         self.font_size = size;
