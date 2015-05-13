@@ -474,7 +474,7 @@ const FRAGMENT_SRC: &'static [u8] = b"
     uniform sampler2D t_Color;
 
     void main() {
-        vec4 t_Font_Color = texture2D(t_Color, v_TexCoord);
+        vec4 t_Font_Color = texture(t_Color, v_TexCoord);
         o_Color = vec4(v_Color.rgb, t_Font_Color.a * v_Color.a);
     }
 ";
