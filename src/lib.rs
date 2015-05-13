@@ -96,7 +96,7 @@ pub fn new<'r, R: Resources, F: Factory<R>>(factory: &'r mut F) -> RendererBuild
 
 impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     /// Create a new text renderer builder.
-    pub fn new(factory: &'r mut F) -> RendererBuilder<'r, R, F> {
+    pub fn new(factory: &'r mut F) -> Self {
         // Default renderer settings.
         RendererBuilder {
             factory: factory,
@@ -112,39 +112,39 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     }
 
     /// Specify custom size.
-    pub fn with_size(mut self, size: u8) -> RendererBuilder<'r, R, F> {
+    pub fn with_size(mut self, size: u8) -> Self {
         self.font_size = size;
         self
     }
 
     /// Specify custom font by path.
-    pub fn with_font(mut self, path: &'r str) -> RendererBuilder<'r, R, F> {
+    pub fn with_font(mut self, path: &'r str) -> Self {
         self.font_path = Some(path);
         self
     }
 
     /// Pass raw font data.
-    pub fn with_font_data(mut self, data: &'r [u8]) -> RendererBuilder<'r, R, F> {
+    pub fn with_font_data(mut self, data: &'r [u8]) -> Self {
         self.font_data = data;
         self
     }
 
     /// Specify outline width and color.
-    pub fn with_outline(mut self, width: u8, color: [f32; 4]) -> RendererBuilder<'r, R, F> {
+    pub fn with_outline(mut self, width: u8, color: [f32; 4]) -> Self {
         self.outline_width = Some(width);
         self.outline_color = color;
         self
     }
 
     /// Specify custom initial buffer size.
-    pub fn with_buffer_size(mut self, size: usize) -> RendererBuilder<'r, R, F> {
+    pub fn with_buffer_size(mut self, size: usize) -> Self {
         self.buffer_size = size;
         self
     }
 
     /// Make available only provided characters in font texture instead of
     /// loading all existing from the font face.
-    pub fn with_chars(mut self, chars: &'r [char]) -> RendererBuilder<'r, R, F> {
+    pub fn with_chars(mut self, chars: &'r [char]) -> Self {
         self.chars = Some(chars);
         self
     }
