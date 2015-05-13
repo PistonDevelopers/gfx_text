@@ -29,6 +29,8 @@ pub struct BitmapChar {
     pub tex: [f32; 2],
     pub tex_width: f32,
     pub tex_height: f32,
+    // This field is used only while building the texture.
+    data: Option<Vec<u8>>,
 }
 
 /// Represents possible errors that may occur during the font loading.
@@ -149,12 +151,9 @@ impl BitmapFont {
 
         let chars_len = needed_chars.len();
         let mut chars_info = HashMap::with_capacity(chars_len);
-        let mut chars_data = HashMap::with_capacity(chars_len);
         let mut sum_image_width = 0;
         let mut max_ch_width = 0;
         let mut ch_box_height = 0;
-
-        // println!("Start building the bitmap (chars: {})", chars_len);
 
         for ch in needed_chars {
             try!(face.load_char(ch as usize, ft::face::RENDER));
@@ -178,8 +177,8 @@ impl BitmapFont {
                 tex: [0.0, 0.0],
                 tex_width: 0.0,
                 tex_height: 0.0,
+                data: Some(ch_data),
             });
-            chars_data.insert(ch, ch_data);
 
             sum_image_width += ch_width;
             max_ch_width = max(max_ch_width, ch_width);
@@ -187,7 +186,7 @@ impl BitmapFont {
         }
 
         // In second pass we map character boxes with varying width onto the
-        // fixed quad texture image.
+        // fixed quad texture image and build the final texture image.
         //
         // We start with optimist (square) assumption about texture dimensions
         // and adjust the image's height and size while filling the rows.
@@ -199,65 +198,69 @@ impl BitmapFont {
         let ideal_image_size = sum_image_width * ch_box_height;
         let ideal_image_width = (ideal_image_size as f32).sqrt() as i32;
         let image_width = max(max_ch_width, ideal_image_width);
-        let mut tiles = vec![Vec::new()];
+        let assumed_size = ideal_image_size as f32 * 1.5;
+        let assumed_ch_in_row = image_width as f32 / max_ch_width as f32;
+        let mut image = Vec::with_capacity(assumed_size as usize);
+        let mut chars_row = Vec::with_capacity(assumed_ch_in_row as usize);
         let mut cursor_x = 0;
-        let mut row = 0;
+        let mut image_height = 0;
 
-        // println!("Placing chars onto a plane");
-
-        // Hashmap doesn't preserve the order but we don't need it anyway.
-        for (ch, ch_info) in chars_info.iter_mut() {
-            ch_info.tex = [cursor_x as f32, (row * ch_box_height) as f32];
-            if cursor_x + ch_info.width > image_width {
-                cursor_x = 0;
-                row += 1;
-                tiles.push(Vec::new());
-                ch_info.tex = [cursor_x as f32, (row * ch_box_height) as f32];
-            }
-            cursor_x += ch_info.width;
-            // FIXME(Kagami): We can't store char data in tiles vector itself
-            // because of borrow checking. So next pass will need to look up
-            // char data hashmap again. It should be fast (O(1)) but still
-            // annoying.
-            tiles[row as usize].push((ch_info.width, ch_info.height, *ch));
-        }
-
-        // Finally, we build the resuling image by copying glyphs pixel data to
-        // the their cells and also fill the empty space.
-
-        let image_height = (row + 1) * ch_box_height;
-        let mut image = Vec::with_capacity((image_width * image_height) as usize);
-
-        // println!("Building the final image");
-
-        for tiles_row in tiles {
-            for row in 0..ch_box_height {
-                let mut cursor_x = 0;
-                for (width, height, ch) in tiles_row.iter().cloned() {
-                    if height <= row {
-                        image.extend(repeat(0).take(width as usize));
-                    } else {
-                        let tile = chars_data.get(&ch).unwrap();
-                        let skip = row * width;
-                        let tile_row = tile.iter().skip(skip as usize).take(width as usize);
-                        image.extend(tile_row.cloned());
-                    };
-                    cursor_x += width;
+        let dump_row = |image: &mut Vec<u8>, chars_row: &Vec<(i32, i32, Vec<u8>)>| {
+            // Copy character data into the image row by row:
+            //
+            //       image_width
+            // +-------+---------+---+
+            // |   x   |    x    |   |
+            // |       |         |   |
+            // |   x   |    x    |   | ch_box_height
+            // |   x   |    x    |   |
+            // |   x   |    x    |   |
+            // |   x   |   x     |   |
+            // |       |  x      |   |
+            // +-------+---------+---+
+            //                     ^--- image_width - width_ch_i - width_ch_j
+            for i in 0..ch_box_height {
+                let mut x = 0;
+                for &(width, height, ref data) in chars_row.iter() {
+                   if i >= height {
+                       image.extend(repeat(0).take(width as usize));
+                   } else {
+                       let skip = i * width;
+                       let line = data.iter().skip(skip as usize).take(width as usize);
+                       image.extend(line.cloned());
+                   };
+                   x += width;
                 }
-                let cols_to_fill = image_width - cursor_x;
+                let cols_to_fill = image_width - x;
                 image.extend(repeat(0).take(cols_to_fill as usize));
             }
-        }
+        };
 
-        // Precalculate some fields to make it easier to use our font.
+        // Hashmap doesn't preserve the order but we don't need it anyway.
+        for (_, ch_info) in chars_info.iter_mut() {
+            if cursor_x + ch_info.width > image_width {
+                dump_row(&mut image, &chars_row);
+                chars_row.clear();
+                cursor_x = 0;
+                image_height += ch_box_height;
+            }
+            let ch_data = ch_info.data.take().unwrap();
+            chars_row.push((ch_info.width, ch_info.height, ch_data));
+            ch_info.tex = [cursor_x as f32, image_height as f32];
+            cursor_x += ch_info.width;
+        }
+        dump_row(&mut image, &chars_row);
+        image_height += ch_box_height;
+
+        // Finally, we just precalculate some fields to make it easier to use
+        // our font.
+
         for (_, ch_info) in chars_info.iter_mut() {
             ch_info.tex[0] /= image_width as f32;
             ch_info.tex[1] /= image_height as f32;
             ch_info.tex_width = ch_info.width as f32 / image_width as f32;
             ch_info.tex_height = ch_info.height as f32 / image_height as f32;
         }
-
-        // println!("Image width: {}, image height: {}", image_width, image_height);
 
         Ok(BitmapFont {
             width: image_width as u16,
