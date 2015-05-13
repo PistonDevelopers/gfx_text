@@ -44,15 +44,19 @@ fn main() {
         }
         canvas.clear(gfx::ClearData {color: WHITE, depth: 1.0, stencil: 0});
 
+        {
+        let mut stream = (&mut canvas.renderer, &canvas.output);
+
         normal_text.draw("The quick brown fox jumps over the lazy dog", [10, 10], BROWN);
         normal_text.draw("The quick red fox jumps over the lazy dog", [30, 30], RED);
-        normal_text.draw_end(&mut canvas).unwrap();
+        normal_text.draw_end(&mut canvas.factory, &mut stream).unwrap();
 
         big_text.draw("The big brown fox jumps over the lazy dog", [50, 50], BROWN);
-        big_text.draw_end(&mut canvas).unwrap();
+        big_text.draw_end(&mut canvas.factory, &mut stream).unwrap();
 
         custom_font_text.draw("The custom blue fox jumps over the lazy dog", [10, 80], BLUE);
-        custom_font_text.draw_end(&mut canvas).unwrap();
+        custom_font_text.draw_end(&mut canvas.factory, &mut stream).unwrap();
+        }
 
         canvas.present();
     }

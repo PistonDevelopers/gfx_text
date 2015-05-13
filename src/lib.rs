@@ -11,7 +11,7 @@ extern crate gfx;
 extern crate freetype;
 
 use std::marker::PhantomData;
-use gfx::{Resources, Factory, CommandBuffer, Output, Device, Canvas};
+use gfx::{Resources, Factory, Output};
 use gfx::{PrimitiveType, ProgramError, DrawError};
 use gfx::traits::{FactoryExt, ToSlice, Stream};
 use gfx::handle::{Program, Buffer, IndexBuffer, Texture};
@@ -291,27 +291,19 @@ impl<R: Resources> Renderer<R> {
     }
 
     /// End with drawing, clear internal state and return resulting batch.
-    pub fn draw_end<
-        C: CommandBuffer<R>,
-        O: Output<R>,
-        D: Device<Resources=R, CommandBuffer=C>,
-        F: Factory<R>,
-    > (
+    pub fn draw_end<F: Factory<R>, S: Stream<R>>(
         &mut self,
-        canvas: &mut Canvas<O, D, F>
+        factory: &mut F,
+        stream: &mut S,
     ) -> Result<(), DrawError<BatchError>> {
-        self.draw_end_at(canvas, DEFAULT_PROJECTION)
+        self.draw_end_at(factory, stream, DEFAULT_PROJECTION)
     }
 
     /// End with drawing using provided projection matrix.
-    pub fn draw_end_at<
-        C: CommandBuffer<R>,
-        O: Output<R>,
-        D: Device<Resources=R, CommandBuffer=C>,
-        F: Factory<R>,
-    > (
+    pub fn draw_end_at<F: Factory<R>, S: Stream<R>>(
         &mut self,
-        canvas: &mut Canvas<O, D, F>,
+        factory: &mut F,
+        stream: &mut S,
         proj: [[f32; 4]; 4]
     ) -> Result<(), DrawError<BatchError>> {
         let ver_len = self.vertex_data.len();
@@ -321,17 +313,20 @@ impl<R: Resources> Renderer<R> {
 
         // Reallocate buffers if there is no enough space for data.
         if ver_len > ver_buf_len {
-            self.vertex_buffer = canvas.factory.create_buffer(
+            self.vertex_buffer = factory.create_buffer(
                 grow_buffer_size(ver_buf_len, ver_len),
                 gfx::BufferUsage::Dynamic);
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
-            self.index_buffer = canvas.factory.create_buffer_index_dynamic(len);
+            self.index_buffer = factory.create_buffer_index_dynamic(len);
         }
         // Move vertex/index data.
-        canvas.renderer.update_buffer(self.vertex_buffer.raw(), &self.vertex_data, 0);
-        canvas.renderer.update_buffer(self.index_buffer.raw(), &self.index_data, 0);
+        {
+            let renderer = stream.access().0;
+            renderer.update_buffer(self.vertex_buffer.raw(), &self.vertex_data, 0);
+            renderer.update_buffer(self.index_buffer.raw(), &self.index_data, 0);
+        }
         // Clear state.
         self.vertex_data.clear();
         self.index_data.clear();
@@ -340,7 +335,7 @@ impl<R: Resources> Renderer<R> {
         let mesh = gfx::Mesh::from_format(self.vertex_buffer.clone(), nv);
         let slice = self.index_buffer.to_slice(PrimitiveType::TriangleList);
         self.params.screen_size = {
-            let (w, h) = canvas.output.get_size();
+            let (w, h) = stream.get_output().get_size();
             [w as f32, h as f32]
         };
         self.params.proj = proj;
@@ -351,7 +346,7 @@ impl<R: Resources> Renderer<R> {
             &self.program,
             &self.params);
 
-        canvas.draw(&batch)
+        stream.draw(&batch)
     }
 }
 
