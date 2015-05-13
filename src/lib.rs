@@ -15,6 +15,7 @@ use gfx::{Resources, Factory, Output};
 use gfx::{PrimitiveType, ProgramError, DrawError};
 use gfx::traits::{FactoryExt, ToSlice, Stream};
 use gfx::handle::{Program, Buffer, IndexBuffer, Texture};
+use gfx::batch::OwnedBatch;
 use gfx::batch::Error as BatchError;
 use gfx::tex::{self, TextureError};
 mod font;
@@ -304,13 +305,12 @@ impl<R: Resources> Renderer<R> {
         &mut self,
         factory: &mut F,
         stream: &mut S,
-        proj: [[f32; 4]; 4]
+        proj: [[f32; 4]; 4],
     ) -> Result<(), DrawError<BatchError>> {
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
         let ind_buf_len = self.index_buffer.len();
-
         // Reallocate buffers if there is no enough space for data.
         if ver_len > ver_buf_len {
             self.vertex_buffer = factory.create_buffer(
@@ -347,6 +347,38 @@ impl<R: Resources> Renderer<R> {
             &self.params);
 
         stream.draw(&batch)
+    }
+
+    /// End with drawing and former resulting batch.
+    pub fn get_batch<F: Factory<R>, O: Output<R>>(
+        &mut self,
+        factory: &mut F,
+        output: &O,
+    ) -> Result<OwnedBatch<ShaderParams<R>>, BatchError> {
+        self.get_batch_at(factory, output, DEFAULT_PROJECTION)
+    }
+
+    /// Return batch for the given projection matrix.
+    pub fn get_batch_at<F: Factory<R>, O: Output<R>>(
+        &mut self,
+        factory: &mut F,
+        output: &O,
+        proj: [[f32; 4]; 4],
+    ) -> Result<OwnedBatch<ShaderParams<R>>, BatchError> {
+        let mesh = factory.create_mesh(&self.vertex_data);
+        let slice = factory.create_buffer_index(&self.index_data)
+                           .to_slice(PrimitiveType::TriangleList);
+        self.vertex_data.clear();
+        self.index_data.clear();
+        self.params.screen_size = {
+            let (w, h) = output.get_size();
+            [w as f32, h as f32]
+        };
+        self.params.proj = proj;
+        let mut batch = try!(OwnedBatch::new(mesh, self.program.clone(),
+                                             self.params.clone()));
+        batch.slice = slice;
+        Ok(batch)
     }
 }
 
