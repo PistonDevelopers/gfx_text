@@ -8,7 +8,7 @@ Basic usage:
 
 ```rust
 // Initialize text renderer.
-let mut text = gfx_text::new(&mut canvas.factory).unwrap();
+let mut text = gfx_text::new(&mut canvas.factory).build().unwrap();
 
 // In render loop:
 
