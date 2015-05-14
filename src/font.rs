@@ -36,6 +36,8 @@ pub struct BitmapChar {
 /// Represents possible errors that may occur during the font loading.
 #[derive(Debug)]
 pub enum FontError {
+    /// Character set is empty
+    EmptyFont,
     /// FreeType library error
     FreetypeError(ft::Error),
 }
@@ -84,14 +86,9 @@ impl BitmapFont {
         let needed_chars = chars
             .map(|sl| HashSet::from_iter(sl.iter().cloned()))
             .unwrap_or_else(|| Self::get_all_face_chars(&mut face));
+        // Short-circuit.
         if needed_chars.is_empty() {
-            // Short-circuit.
-            return Ok(BitmapFont {
-                width: 0,
-                height: 0,
-                chars: HashMap::new(),
-                image: Vec::new(),
-            })
+            return Err(FontError::EmptyFont);
         }
 
         try!(face.set_pixel_sizes(0, font_size as u32));
