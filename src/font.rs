@@ -224,7 +224,7 @@ impl BitmapFont {
             //                     ^--- image_width - width_ch_i - width_ch_j
             for i in 0..ch_box_height {
                 let mut x = 0;
-                for &(width, height, ref data) in chars_row.iter() {
+                for &(width, height, ref data) in chars_row {
                    if i >= height {
                        image.extend(repeat(0).take(width as usize));
                    } else {
