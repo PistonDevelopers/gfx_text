@@ -155,6 +155,8 @@ impl BitmapFont {
         let mut max_ch_width = 0;
         let mut ch_box_height = 0;
 
+        debug!("Start building the bitmap (chars: {})", chars_len);
+
         for ch in needed_chars {
             try!(face.load_char(ch as usize, ft::face::RENDER));
             let glyph = face.glyph();
@@ -198,6 +200,7 @@ impl BitmapFont {
         let ideal_image_size = sum_image_width * ch_box_height;
         let ideal_image_width = (ideal_image_size as f32).sqrt() as i32;
         let image_width = max(max_ch_width, ideal_image_width);
+        let image_width = (image_width + 3) & !3; // aligning to 4
         let assumed_size = ideal_image_size as f32 * 1.5;
         let assumed_ch_in_row = image_width as f32 / max_ch_width as f32;
         let mut image = Vec::with_capacity(assumed_size as usize);
@@ -226,6 +229,7 @@ impl BitmapFont {
                        image.extend(repeat(0).take(width as usize));
                    } else {
                        let skip = i * width;
+                       debug_assert!(data.len() >= (skip + width) as usize);
                        let line = data.iter().skip(skip as usize).take(width as usize);
                        image.extend(line.cloned());
                    };
@@ -235,6 +239,8 @@ impl BitmapFont {
                 image.extend(repeat(0).take(cols_to_fill as usize));
             }
         };
+
+        debug!("Placing chars onto a plane");
 
         // Hashmap doesn't preserve the order but we don't need it anyway.
         for (_, ch_info) in chars_info.iter_mut() {
@@ -261,6 +267,9 @@ impl BitmapFont {
             ch_info.tex_width = ch_info.width as f32 / image_width as f32;
             ch_info.tex_height = ch_info.height as f32 / image_height as f32;
         }
+
+        info!("Image width: {}, image height: {}, total size: {}",
+            image_width, image_height, image.len());
 
         Ok(BitmapFont {
             width: image_width as u16,

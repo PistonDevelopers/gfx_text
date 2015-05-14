@@ -5,6 +5,8 @@
 #![deny(missing_docs)]
 
 #[macro_use]
+extern crate log;
+#[macro_use]
 extern crate gfx;
 extern crate freetype;
 
@@ -173,20 +175,11 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
             None =>
                 BitmapFont::from_bytes(self.font_data, self.font_size, self.chars),
         });
-        // FIXME(Kagami): Seems like blending R8 texture with RGBA8
-        // user-specified font color cause artifacts, so converting to
-        // full-component image as for now.
-        let image24: Vec<_> = font_bitmap.get_image().iter().flat_map(|&i|
-            Some(0).into_iter()  // R
-            .chain(Some(0))      // G
-            .chain(Some(0))      // B
-            .chain(Some(i))      // A
-        ).collect();
-        let font_texture = try!(create_texture_rgba8_static(
+        let font_texture = try!(create_texture_r8_static(
             self.factory,
             font_bitmap.get_width(),
             font_bitmap.get_height(),
-            &image24,
+            font_bitmap.get_image(),
         ));
         let sampler = self.factory.create_sampler(
             tex::SamplerInfo::new(tex::FilterMethod::Bilinear,
@@ -400,13 +393,20 @@ fn grow_buffer_size(mut current_size: usize, desired_size: usize) -> usize {
     current_size
 }
 
-fn create_texture_rgba8_static<R: Resources, F: Factory<R>>(
+fn create_texture_r8_static<R: Resources, F: Factory<R>>(
     factory: &mut F,
     width: u16,
     height: u16,
     data: &[u8]
 ) -> Result<Texture<R>, TextureError>{
-    let texture = try!(factory.create_texture_rgba8(width, height));
+    let texture = try!(factory.create_texture(tex::TextureInfo {
+        width: width,
+        height: height,
+        depth: 1,
+        levels: 1,
+        kind: tex::TextureKind::Texture2D,
+        format: tex::R8,
+    }));
     try!(factory.update_texture_raw(
         &texture,
         &texture.get_info().to_image_info(),
@@ -480,6 +480,6 @@ const FRAGMENT_SRC: &'static [u8] = b"
 
     void main() {
         vec4 t_Font_Color = texture(t_Color, v_TexCoord);
-        o_Color = vec4(v_Color.rgb, t_Font_Color.a * v_Color.a);
+        o_Color = vec4(v_Color.rgb, t_Font_Color.r * v_Color.a);
     }
 ";
