@@ -62,11 +62,12 @@ impl BitmapFont {
     fn get_all_face_chars<'a>(face: &mut Face<'a>) -> HashSet<char> {
         let mut result = HashSet::new();
         let mut index = 0;
+        let mut face_ptr = face.raw_mut();
         unsafe {
-            let mut code = ft::ffi::FT_Get_First_Char(face.raw_mut(), &mut index);
+            let mut code = ft::ffi::FT_Get_First_Char(face_ptr, &mut index);
             while index != 0 {
-                from_u32(code as u32).map(|ch| { result.insert(ch) });
-                code = ft::ffi::FT_Get_Next_Char(face.raw_mut(), code, &mut index);
+                from_u32(code as u32).map(|ch| result.insert(ch));
+                code = ft::ffi::FT_Get_Next_Char(face_ptr, code, &mut index);
             }
         }
         result
