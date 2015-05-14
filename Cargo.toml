@@ -3,6 +3,9 @@ name = "gfx_text"
 version = "0.0.0"
 authors = ["Kagami Hiiragi <kagami@genshiken.org>"]
 
+[dependencies]
+log = "*"
+
 [dependencies.gfx]
 git = "https://github.com/gfx-rs/gfx-rs"
 
@@ -10,6 +13,9 @@ git = "https://github.com/gfx-rs/gfx-rs"
 git = "https://github.com/PistonDevelopers/freetype-rs"
 
 ### For examples
+
+[dev-dependencies]
+env_logger = "*"
 
 [dev-dependencies.gfx_window_glutin]
 git = "https://github.com/gfx-rs/gfx_window_glutin"

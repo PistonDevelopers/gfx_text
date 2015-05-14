@@ -1,3 +1,4 @@
+extern crate env_logger;
 extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate glutin;
@@ -14,6 +15,8 @@ const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const FONT_PATH: &'static str = "examples/assets/Ubuntu-R.ttf";
 
 fn main() {
+    env_logger::init().unwrap();
+
     let mut canvas = {
         let window = WindowBuilder::new()
             .with_dimensions(640, 480)
