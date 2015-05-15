@@ -198,7 +198,6 @@ impl BitmapFont {
         let ideal_image_size = sum_image_width * ch_box_height;
         let ideal_image_width = (ideal_image_size as f32).sqrt() as i32;
         let image_width = max(max_ch_width, ideal_image_width);
-        let image_width = (image_width + 3) & !3; // aligning to 4
         let assumed_size = ideal_image_size as f32 * 1.5;
         let assumed_ch_in_row = image_width as f32 / max_ch_width as f32;
         let mut image = Vec::with_capacity(assumed_size as usize);
