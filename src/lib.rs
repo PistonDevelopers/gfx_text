@@ -217,13 +217,13 @@ impl<R: Resources> Renderer<R> {
     }
 
     fn draw_generic(&mut self, text: &str, pos: Result<[i32; 2], [f32; 3]>, color: [f32; 4]) {
+        // `Result` is used here as an `Either` analogue.
         let (screen_pos, world_pos, screen_rel) = match pos {
             Ok(screen_pos) => (screen_pos, [0.0, 0.0, 0.0], 1),
             Err(world_pos) => ([0, 0], world_pos, 0),
         };
         let (mut x, y) = (screen_pos[0] as f32, screen_pos[1] as f32);
         for ch in text.chars() {
-            let index = self.vertex_data.len() as u32;
             let ch_info = match self.font_bitmap.find_char(ch) {
                 Some(info) => info,
                 // Skip unknown chars from text string. Probably it would be
@@ -234,8 +234,9 @@ impl<R: Resources> Renderer<R> {
             let x_offset = x + ch_info.x_offset as f32;
             let y_offset = y + ch_info.y_offset as f32;
             let tex = ch_info.tex;
+            let index = self.vertex_data.len() as u32;
 
-            // Top-left point, index 0.
+            // Top-left point, index + 0.
             self.vertex_data.push(Vertex {
                 pos: [x_offset, y_offset],
                 tex: [tex[0], tex[1]],
@@ -243,7 +244,7 @@ impl<R: Resources> Renderer<R> {
                 screen_rel: screen_rel,
                 color: color,
             });
-            // Bottom-left point, index 1.
+            // Bottom-left point, index + 1.
             self.vertex_data.push(Vertex {
                 pos: [x_offset, y_offset + ch_info.height as f32],
                 tex: [tex[0], tex[1] + ch_info.tex_height],
@@ -251,7 +252,7 @@ impl<R: Resources> Renderer<R> {
                 screen_rel: screen_rel,
                 color: color,
             });
-            // Bottom-right point, index 2.
+            // Bottom-right point, index + 2.
             self.vertex_data.push(Vertex {
                 pos: [x_offset + ch_info.width as f32, y_offset + ch_info.height as f32],
                 tex: [tex[0] + ch_info.tex_width, tex[1] + ch_info.tex_height],
@@ -259,7 +260,7 @@ impl<R: Resources> Renderer<R> {
                 screen_rel: screen_rel,
                 color: color,
             });
-            // Top-right point, index 3.
+            // Top-right point, index + 3.
             self.vertex_data.push(Vertex {
                 pos: [x_offset + ch_info.width as f32, y_offset],
                 tex: [tex[0] + ch_info.tex_width, tex[1]],

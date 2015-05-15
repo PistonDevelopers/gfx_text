@@ -86,7 +86,6 @@ impl BitmapFont {
         let needed_chars = chars
             .map(|sl| HashSet::from_iter(sl.iter().cloned()))
             .unwrap_or_else(|| Self::get_all_face_chars(&mut face));
-        // Short-circuit.
         if needed_chars.is_empty() {
             return Err(FontError::EmptyFont);
         }
