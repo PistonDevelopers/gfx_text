@@ -8,7 +8,7 @@ Basic usage:
 
 ```rust
 // Initialize text renderer.
-let mut text = gfx_text::new(&mut canvas.factory).build().unwrap();
+let mut text = gfx_text::new(&mut factory).build().unwrap();
 
 // In render loop:
 
@@ -20,7 +20,7 @@ text.draw(
 );
 
 // Render the final batch.
-text.draw_end(&mut canvas);
+text.draw_end(&mut factory, &mut stream);
 ```
 
 See [API documentation](http://docs.piston.rs/gfx_text/gfx_text/) for overview of all available methods.
