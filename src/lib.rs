@@ -10,7 +10,6 @@ extern crate log;
 extern crate gfx;
 extern crate freetype;
 
-use std::mem;
 use std::marker::PhantomData;
 use gfx::{Resources, Factory, CommandBuffer, Output, Device, Canvas};
 use gfx::{PrimitiveType, ProgramError, DrawError};
@@ -159,11 +158,7 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
             self.buffer_size,
             gfx::BufferUsage::Dynamic,
         );
-        let index_buffer = create_index_buffer(
-            self.factory,
-            self.buffer_size,
-            gfx::BufferUsage::Dynamic,
-        );
+        let index_buffer = self.factory.create_buffer_index_dynamic(self.buffer_size);
 
         // Initialize bitmap font.
         // TODO(Kagami): Outline!
@@ -330,14 +325,12 @@ impl<R: Resources> Renderer<R> {
                 gfx::BufferUsage::Dynamic);
         }
         if ind_len > ind_buf_len {
-            self.index_buffer = create_index_buffer(
-                &mut canvas.factory,
-                grow_buffer_size(ind_buf_len, ind_len),
-                gfx::BufferUsage::Dynamic);
+            let len = grow_buffer_size(ind_buf_len, ind_len);
+            self.index_buffer = canvas.factory.create_buffer_index_dynamic(len);
         }
         // Move vertex/index data.
-        canvas.factory.update_buffer(&self.vertex_buffer, &self.vertex_data, 0);
-        update_index_buffer(&mut canvas.factory, &self.index_buffer, &self.index_data, 0);
+        canvas.renderer.update_buffer(self.vertex_buffer.raw(), &self.vertex_data, 0);
+        canvas.renderer.update_buffer(self.index_buffer.raw(), &self.index_data, 0);
         // Clear state.
         self.vertex_data.clear();
         self.index_data.clear();
@@ -362,26 +355,6 @@ impl<R: Resources> Renderer<R> {
 }
 
 // Some missing helpers.
-
-fn create_index_buffer<R: Resources, F: Factory<R>, T: Copy>(
-    factory: &mut F,
-    num: usize,
-    usage: gfx::BufferUsage,
-) -> IndexBuffer<R, T> {
-    IndexBuffer::from_raw(factory.create_buffer_raw(num * mem::size_of::<T>(), usage))
-}
-
-fn update_index_buffer<R: Resources, F: Factory<R>, T: Copy>(
-    factory: &mut F,
-    buf: &IndexBuffer<R, IndexT>,
-    data: &[T],
-    offset_elements: usize
-) {
-    factory.update_buffer_raw(
-        buf.raw(),
-        gfx::as_byte_slice(data),
-        mem::size_of::<T>() * offset_elements)
-}
 
 fn grow_buffer_size(mut current_size: usize, desired_size: usize) -> usize {
     if current_size < 1 {
