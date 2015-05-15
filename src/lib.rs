@@ -43,6 +43,10 @@ pub enum Error {
     FontError(FontError),
     /// Texture creation/updation error
     TextureError(TextureError),
+    /// Draw-time error
+    DrawError(DrawError<BatchError>),
+    /// An error occuring at batch creation
+    BatchError(BatchError),
 }
 
 impl From<ProgramError> for Error {
@@ -55,6 +59,14 @@ impl From<FontError> for Error {
 
 impl From<TextureError> for Error {
     fn from(e: TextureError) -> Error { Error::TextureError(e) }
+}
+
+impl From<DrawError<BatchError>> for Error {
+    fn from(e: DrawError<BatchError>) -> Error { Error::DrawError(e) }
+}
+
+impl From<BatchError> for Error {
+    fn from(e: BatchError) -> Error { Error::BatchError(e) }
 }
 
 type IndexT = u32;
@@ -296,7 +308,7 @@ impl<R: Resources> Renderer<R> {
         &mut self,
         factory: &mut F,
         stream: &mut S,
-    ) -> Result<(), DrawError<BatchError>> {
+    ) -> Result<(), Error> {
         self.draw_end_at(factory, stream, DEFAULT_PROJECTION)
     }
 
@@ -306,7 +318,7 @@ impl<R: Resources> Renderer<R> {
         factory: &mut F,
         stream: &mut S,
         proj: [[f32; 4]; 4],
-    ) -> Result<(), DrawError<BatchError>> {
+    ) -> Result<(), Error> {
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
@@ -346,7 +358,7 @@ impl<R: Resources> Renderer<R> {
             &self.program,
             &self.params);
 
-        stream.draw(&batch)
+        Ok(try!(stream.draw(&batch)))
     }
 
     /// End with drawing and former resulting batch.
@@ -354,7 +366,7 @@ impl<R: Resources> Renderer<R> {
         &mut self,
         factory: &mut F,
         output: &O,
-    ) -> Result<OwnedBatch<ShaderParams<R>>, BatchError> {
+    ) -> Result<OwnedBatch<ShaderParams<R>>, Error> {
         self.get_batch_at(factory, output, DEFAULT_PROJECTION)
     }
 
@@ -364,7 +376,7 @@ impl<R: Resources> Renderer<R> {
         factory: &mut F,
         output: &O,
         proj: [[f32; 4]; 4],
-    ) -> Result<OwnedBatch<ShaderParams<R>>, BatchError> {
+    ) -> Result<OwnedBatch<ShaderParams<R>>, Error> {
         let mesh = factory.create_mesh(&self.vertex_data);
         let slice = factory.create_buffer_index(&self.index_data)
                            .to_slice(PrimitiveType::TriangleList);
