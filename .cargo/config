@@ -1,0 +1,4 @@
+[target.i686-pc-windows-gnu.freetype]
+rustc-link-search = ["C:\\PhosphorusDeps"]
+rustc-link-lib = ["freetype-6"]
+root = "C:\\PhosphorusDeps"

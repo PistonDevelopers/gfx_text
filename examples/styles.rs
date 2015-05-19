@@ -4,7 +4,7 @@ extern crate gfx_window_glutin;
 extern crate glutin;
 extern crate gfx_text;
 
-use gfx::traits::{IntoCanvas, Stream};
+use gfx::traits::{Stream, Device};
 use gfx_window_glutin as gfxw;
 use glutin::{WindowBuilder, Event, VirtualKeyCode, GL_CORE};
 
@@ -17,47 +17,49 @@ const FONT_PATH: &'static str = "examples/assets/Ubuntu-R.ttf";
 fn main() {
     env_logger::init().unwrap();
 
-    let mut canvas = {
+    let (mut stream, mut device, mut factory) = {
         let window = WindowBuilder::new()
             .with_dimensions(640, 480)
             .with_title(format!("gfx_text example"))
             .with_gl(GL_CORE)
             .build()
             .unwrap();
-        gfxw::init(window).into_canvas()
+        gfxw::init(window)
     };
 
-    let mut normal_text = gfx_text::new(&mut canvas.factory).unwrap();
-    let mut big_text = gfx_text::new(&mut canvas.factory).with_size(20).unwrap();
-    let mut custom_font_text = gfx_text::new(&mut canvas.factory)
+    let mut normal_text = gfx_text::new(&mut factory).unwrap();
+    let mut big_text = gfx_text::new(&mut factory).with_size(20).unwrap();
+    let mut custom_font_text = gfx_text::new(&mut factory)
         .with_size(25)
         .with_font(FONT_PATH)
         .unwrap();
 
     'main: loop {
-        for event in canvas.output.window.poll_events() {
+        for event in stream.out.window.poll_events() {
             match event {
                 Event::Closed => break 'main,
                 Event::KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) => break 'main,
                 _ => {},
             }
         }
-        canvas.clear(gfx::ClearData {color: WHITE, depth: 1.0, stencil: 0});
+        stream.clear(gfx::ClearData {color: WHITE, depth: 1.0, stencil: 0});
 
         {
-        let mut stream = (&mut canvas.renderer, &canvas.output);
 
         normal_text.draw("The quick brown fox jumps over the lazy dog", [10, 10], BROWN);
         normal_text.draw("The quick red fox jumps over the lazy dog", [30, 30], RED);
-        normal_text.draw_end(&mut canvas.factory, &mut stream).unwrap();
+        normal_text.draw_end(&mut factory, &mut stream).unwrap();
 
         big_text.draw("The big brown fox jumps over the lazy dog", [50, 50], BROWN);
-        big_text.draw_end(&mut canvas.factory, &mut stream).unwrap();
+        big_text.draw_end(&mut factory, &mut stream).unwrap();
 
         custom_font_text.draw("The custom blue fox jumps over the lazy dog", [10, 80], BLUE);
-        custom_font_text.draw_end(&mut canvas.factory, &mut stream).unwrap();
+        custom_font_text.draw_end(&mut factory, &mut stream).unwrap();
         }
 
-        canvas.present();
+        //stream.present(&mut device); ICE!
+        stream.flush(&mut device);
+        stream.out.window.swap_buffers();
+        device.cleanup();
     }
 }
