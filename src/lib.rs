@@ -14,7 +14,7 @@ use std::marker::PhantomData;
 use gfx::{Resources, Factory, Output};
 use gfx::{PrimitiveType, ProgramError, DrawError};
 use gfx::traits::{FactoryExt, ToSlice, Stream};
-use gfx::handle::{Program, Buffer, IndexBuffer, Texture};
+use gfx::handle::{Program, Buffer, Texture};
 use gfx::batch::OwnedBatch;
 use gfx::batch::Error as BatchError;
 use gfx::tex::{self, TextureError};
@@ -78,7 +78,7 @@ pub struct Renderer<R: Resources> {
     vertex_data: Vec<Vertex>,
     vertex_buffer: Buffer<R, Vertex>,
     index_data: Vec<IndexT>,
-    index_buffer: IndexBuffer<R, IndexT>,
+    index_buffer: Buffer<R, IndexT>,
     font_bitmap: BitmapFont,
     params: ShaderParams<R>,
 }
@@ -167,11 +167,14 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     pub fn build(self) -> Result<Renderer<R>, Error> {
         let program = try!(self.factory.link_program(VERTEX_SRC, FRAGMENT_SRC));
         let state = gfx::DrawState::new().blend(gfx::BlendPreset::Alpha);
-        let vertex_buffer = self.factory.create_buffer(
+        let vertex_buffer = self.factory.create_buffer_dynamic(
             self.buffer_size,
-            gfx::BufferUsage::Dynamic,
+            gfx::BufferRole::Vertex,
         );
-        let index_buffer = self.factory.create_buffer_index_dynamic(self.buffer_size);
+        let index_buffer = self.factory.create_buffer_dynamic(
+            self.buffer_size,
+            gfx::BufferRole::Index
+        );
 
         // Initialize bitmap font.
         // TODO(Kagami): Outline!
@@ -325,13 +328,14 @@ impl<R: Resources> Renderer<R> {
         let ind_buf_len = self.index_buffer.len();
         // Reallocate buffers if there is no enough space for data.
         if ver_len > ver_buf_len {
-            self.vertex_buffer = factory.create_buffer(
+            self.vertex_buffer = factory.create_buffer_dynamic(
                 grow_buffer_size(ver_buf_len, ver_len),
-                gfx::BufferUsage::Dynamic);
+                gfx::BufferRole::Vertex
+            );
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
-            self.index_buffer = factory.create_buffer_index_dynamic(len);
+            self.index_buffer = factory.create_buffer_dynamic(len, gfx::BufferRole::Index);
         }
         // Move vertex/index data.
         {
@@ -378,7 +382,7 @@ impl<R: Resources> Renderer<R> {
         proj: [[f32; 4]; 4],
     ) -> Result<OwnedBatch<ShaderParams<R>>, Error> {
         let mesh = factory.create_mesh(&self.vertex_data);
-        let slice = factory.create_buffer_index(&self.index_data)
+        let slice = factory.create_buffer_static(&self.index_data, gfx::BufferRole::Index)
                            .to_slice(PrimitiveType::TriangleList);
         self.vertex_data.clear();
         self.index_data.clear();
@@ -442,7 +446,7 @@ mod shader_structs {
         a_Color@ color: [f32; 4],
     });
 
-    gfx_parameters!( ShaderParams/ParamsLink {
+    gfx_parameters!( ShaderParams {
         t_Color@ color: TextureParam<R>,
         u_Screen_Size@ screen_size: [f32; 2],
         u_Proj@ proj: [[f32; 4]; 4],
