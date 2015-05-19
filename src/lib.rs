@@ -11,9 +11,8 @@ extern crate gfx;
 extern crate freetype;
 
 use std::marker::PhantomData;
-use gfx::{Resources, Factory, Output};
-use gfx::{PrimitiveType, ProgramError, DrawError};
-use gfx::traits::{FactoryExt, ToSlice, Stream};
+use gfx::{Resources, PrimitiveType, ProgramError, DrawError};
+use gfx::traits::*;
 use gfx::handle::{Program, Buffer, Texture};
 use gfx::batch::OwnedBatch;
 use gfx::batch::Error as BatchError;
@@ -72,7 +71,8 @@ impl From<BatchError> for Error {
 type IndexT = u32;
 
 /// Text renderer instance.
-pub struct Renderer<R: Resources> {
+pub struct Renderer<R: Resources, F: Factory<R>> {
+    factory: F,
     program: Program<R>,
     draw_state: gfx::DrawState,
     vertex_data: Vec<Vertex>,
@@ -84,8 +84,8 @@ pub struct Renderer<R: Resources> {
 }
 
 /// Text renderer builder instance.
-pub struct RendererBuilder<'r, R: Resources, F: Factory<R> + 'r> {
-    factory: &'r mut F,
+pub struct RendererBuilder<'r, R: Resources, F: Factory<R>> {
+    factory: F,
     font_size: u8,
     // NOTE(Kagami): Better to use `P: AsRef<OsStr>` but since we store path in
     // the intermediate builder structure, Rust will unable to infer type
@@ -104,13 +104,13 @@ pub struct RendererBuilder<'r, R: Resources, F: Factory<R> + 'r> {
 }
 
 /// Create a new text renderer builder. Alias for `RendererBuilder::new`.
-pub fn new<'r, R: Resources, F: Factory<R>>(factory: &'r mut F) -> RendererBuilder<'r, R, F> {
+pub fn new<'r, R: Resources, F: Factory<R>>(factory: F) -> RendererBuilder<'r, R, F> {
     RendererBuilder::new(factory)
 }
 
 impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     /// Create a new text renderer builder.
-    pub fn new(factory: &'r mut F) -> Self {
+    pub fn new(factory: F) -> Self {
         // Default renderer settings.
         RendererBuilder {
             factory: factory,
@@ -164,7 +164,7 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     }
 
     /// Build a new text renderer instance using current settings.
-    pub fn build(self) -> Result<Renderer<R>, Error> {
+    pub fn build(mut self) -> Result<Renderer<R, F>, Error> {
         let program = try!(self.factory.link_program(VERTEX_SRC, FRAGMENT_SRC));
         let state = gfx::DrawState::new().blend(gfx::BlendPreset::Alpha);
         let vertex_buffer = self.factory.create_buffer_dynamic(
@@ -187,7 +187,7 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
                 BitmapFont::from_bytes(self.font_data, self.font_size, self.chars),
         });
         let font_texture = try!(create_texture_r8_static(
-            self.factory,
+            &mut self.factory,
             font_bitmap.get_width(),
             font_bitmap.get_height(),
             font_bitmap.get_image(),
@@ -198,6 +198,7 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
         );
 
         Ok(Renderer {
+            factory: self.factory,
             program: program,
             draw_state: state,
             vertex_data: Vec::new(),
@@ -215,12 +216,12 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     }
 
     /// Just an alias for `builder.build().unwrap()`.
-    pub fn unwrap(self) -> Renderer<R> {
+    pub fn unwrap(self) -> Renderer<R, F> {
         self.build().unwrap()
     }
 }
 
-impl<R: Resources> Renderer<R> {
+impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// Add some text to the current draw scene relative to the top left corner
     /// of the screen using pixel coords.
     pub fn draw(&mut self, text: &str, pos: [i32; 2], color: [f32; 4]) {
@@ -307,35 +308,30 @@ impl<R: Resources> Renderer<R> {
     }
 
     /// End with drawing, clear internal state and return resulting batch.
-    pub fn draw_end<F: Factory<R>, S: Stream<R>>(
-        &mut self,
-        factory: &mut F,
-        stream: &mut S,
-    ) -> Result<(), Error> {
-        self.draw_end_at(factory, stream, DEFAULT_PROJECTION)
+    pub fn draw_end<S: Stream<R>>(&mut self, stream: &mut S)
+                    -> Result<(), Error>
+    {
+        self.draw_end_at(stream, DEFAULT_PROJECTION)
     }
 
     /// End with drawing using provided projection matrix.
-    pub fn draw_end_at<F: Factory<R>, S: Stream<R>>(
-        &mut self,
-        factory: &mut F,
-        stream: &mut S,
-        proj: [[f32; 4]; 4],
-    ) -> Result<(), Error> {
+    pub fn draw_end_at<S: Stream<R>>(&mut self, stream: &mut S,
+                       proj: [[f32; 4]; 4]) -> Result<(), Error>
+    {
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
         let ind_buf_len = self.index_buffer.len();
         // Reallocate buffers if there is no enough space for data.
         if ver_len > ver_buf_len {
-            self.vertex_buffer = factory.create_buffer_dynamic(
+            self.vertex_buffer = self.factory.create_buffer_dynamic(
                 grow_buffer_size(ver_buf_len, ver_len),
                 gfx::BufferRole::Vertex
             );
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
-            self.index_buffer = factory.create_buffer_dynamic(len, gfx::BufferRole::Index);
+            self.index_buffer = self.factory.create_buffer_dynamic(len, gfx::BufferRole::Index);
         }
         // Move vertex/index data.
         {
@@ -366,24 +362,18 @@ impl<R: Resources> Renderer<R> {
     }
 
     /// End with drawing and former resulting batch.
-    pub fn get_batch<F: Factory<R>, O: Output<R>>(
-        &mut self,
-        factory: &mut F,
-        output: &O,
-    ) -> Result<OwnedBatch<ShaderParams<R>>, Error> {
-        self.get_batch_at(factory, output, DEFAULT_PROJECTION)
+    pub fn get_batch<O: Output<R>>(&mut self, output: &O)
+                     -> Result<OwnedBatch<ShaderParams<R>>, Error>
+    {
+        self.get_batch_at(output, DEFAULT_PROJECTION)
     }
 
     /// Return batch for the given projection matrix.
-    pub fn get_batch_at<F: Factory<R>, O: Output<R>>(
-        &mut self,
-        factory: &mut F,
-        output: &O,
-        proj: [[f32; 4]; 4],
-    ) -> Result<OwnedBatch<ShaderParams<R>>, Error> {
-        let mesh = factory.create_mesh(&self.vertex_data);
-        let slice = factory.create_buffer_static(&self.index_data, gfx::BufferRole::Index)
-                           .to_slice(PrimitiveType::TriangleList);
+    pub fn get_batch_at<O: Output<R>>(&mut self, output: &O, proj: [[f32; 4]; 4])
+                        -> Result<OwnedBatch<ShaderParams<R>>, Error> {
+        let mesh = self.factory.create_mesh(&self.vertex_data);
+        let slice = self.index_data.to_slice(&mut self.factory,
+                                             PrimitiveType::TriangleList);
         self.vertex_data.clear();
         self.index_data.clear();
         self.params.screen_size = {
