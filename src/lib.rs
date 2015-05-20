@@ -11,8 +11,8 @@ extern crate gfx;
 extern crate freetype;
 
 use std::marker::PhantomData;
-use gfx::{Resources, PrimitiveType, ProgramError, DrawError};
-use gfx::traits::*;
+use gfx::{Factory, Resources, PrimitiveType, ProgramError, DrawError};
+use gfx::traits::{FactoryExt, Output, Stream, ToIndexSlice, ToSlice};
 use gfx::handle::{Program, Buffer, Texture};
 use gfx::batch::OwnedBatch;
 use gfx::batch::Error as BatchError;
