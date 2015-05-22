@@ -57,9 +57,6 @@ fn main() {
         custom_font_text.draw("The custom blue fox jumps over the lazy dog", [10, 80], BLUE);
         custom_font_text.draw_end(&mut stream).unwrap();
 
-        //stream.present(&mut device); ICE!
-        stream.flush(&mut device);
-        stream.out.window.swap_buffers();
-        device.cleanup();
+        stream.present(&mut device);
     }
 }
