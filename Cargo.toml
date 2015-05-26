@@ -2,23 +2,22 @@
 name = "gfx_text"
 version = "0.0.0"
 authors = ["Kagami Hiiragi <kagami@genshiken.org>"]
+description = "Draw text for gfx using freetype."
+keywords = ["gfx", "graphics", "text", "freetype", "font"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/PistonDevelopers/gfx_text"
+repository = "https://github.com/PistonDevelopers/gfx_text.git"
+documentation = "http://docs.piston.rs/gfx_text/gfx_text/"
 
 [dependencies]
-log = "*"
-
-[dependencies.gfx]
-git = "https://github.com/gfx-rs/gfx-rs"
-
-[dependencies.freetype-rs]
-git = "https://github.com/PistonDevelopers/freetype-rs"
+log = "^0.3.1"
+gfx = "^0.5.2"
+freetype-rs = "~0.0.10"
 
 ### For examples
 
 [dev-dependencies]
 env_logger = "*"
-
-[dev-dependencies.gfx_window_glutin]
-git = "https://github.com/gfx-rs/gfx_window_glutin"
-
-[dev-dependencies.glutin]
-git = "https://github.com/tomaka/glutin"
+gfx_window_glutin = "*"
+glutin = "*"
