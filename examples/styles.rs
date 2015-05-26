@@ -4,7 +4,7 @@ extern crate gfx_window_glutin;
 extern crate glutin;
 extern crate gfx_text;
 
-use gfx::traits::{Stream, Device};
+use gfx::traits::Stream;
 use gfx_window_glutin as gfxw;
 use glutin::{WindowBuilder, Event, VirtualKeyCode, GL_CORE};
 
