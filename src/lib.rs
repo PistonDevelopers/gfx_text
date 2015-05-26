@@ -309,15 +309,13 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
 
     /// End with drawing, clear internal state and return resulting batch.
     pub fn draw_end<S: Stream<R>>(&mut self, stream: &mut S)
-                    -> Result<(), Error>
-    {
+                    -> Result<(), Error> {
         self.draw_end_at(stream, DEFAULT_PROJECTION)
     }
 
     /// End with drawing using provided projection matrix.
     pub fn draw_end_at<S: Stream<R>>(&mut self, stream: &mut S,
-                       proj: [[f32; 4]; 4]) -> Result<(), Error>
-    {
+                       proj: [[f32; 4]; 4]) -> Result<(), Error> {
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
@@ -363,8 +361,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
 
     /// End with drawing and former resulting batch.
     pub fn get_batch<O: Output<R>>(&mut self, output: &O)
-                     -> Result<OwnedBatch<ShaderParams<R>>, Error>
-    {
+                     -> Result<OwnedBatch<ShaderParams<R>>, Error> {
         self.get_batch_at(output, DEFAULT_PROJECTION)
     }
 
@@ -404,8 +401,8 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
     factory: &mut F,
     width: u16,
     height: u16,
-    data: &[u8]
-) -> Result<Texture<R>, TextureError>{
+    data: &[u8],
+) -> Result<Texture<R>, TextureError> {
     let texture = try!(factory.create_texture(tex::TextureInfo {
         width: width,
         height: height,
