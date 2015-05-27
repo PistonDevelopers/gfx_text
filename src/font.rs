@@ -152,7 +152,7 @@ impl BitmapFont {
         let mut max_ch_width = 0;
         let mut ch_box_height = 0;
 
-        debug!("Start building the bitmap (chars: {})", chars_len);
+        // debug!("Start building the bitmap (chars: {})", chars_len);
 
         for ch in needed_chars {
             try!(face.load_char(ch as usize, ft::face::RENDER));
@@ -236,7 +236,7 @@ impl BitmapFont {
             }
         };
 
-        debug!("Placing chars onto a plane");
+        // debug!("Placing chars onto a plane");
 
         // Hashmap doesn't preserve the order but we don't need it anyway.
         for (_, ch_info) in chars_info.iter_mut() {
@@ -264,8 +264,8 @@ impl BitmapFont {
             ch_info.tex_height = ch_info.height as f32 / image_height as f32;
         }
 
-        info!("Image width: {}, image height: {}, total size: {}",
-            image_width, image_height, image.len());
+        // info!("Image width: {}, image height: {}, total size: {}",
+        //     image_width, image_height, image.len());
 
         Ok(BitmapFont {
             width: image_width as u16,

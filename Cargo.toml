@@ -11,13 +11,13 @@ repository = "https://github.com/PistonDevelopers/gfx_text.git"
 documentation = "http://docs.piston.rs/gfx_text/gfx_text/"
 
 [dependencies]
-log = "^0.3.1"
 gfx = "^0.5.2"
 freetype-rs = "~0.0.10"
 
 ### For examples
 
 [dev-dependencies]
+log = "*"
 env_logger = "*"
 gfx_window_glutin = "*"
 glutin = "*"
