@@ -17,7 +17,7 @@ const FONT_PATH: &'static str = "examples/assets/Ubuntu-R.ttf";
 fn main() {
     env_logger::init().unwrap();
 
-    let (mut stream, mut device, _) = {
+    let (mut stream, mut device, factory) = {
         let window = WindowBuilder::new()
             .with_dimensions(640, 480)
             .with_title(format!("gfx_text example"))
@@ -27,12 +27,9 @@ fn main() {
         gfxw::init(window)
     };
 
-    let mut normal_text = gfx_text::new(device.spawn_factory())
-        .unwrap();
-    let mut big_text = gfx_text::new(device.spawn_factory())
-        .with_size(20)
-        .unwrap();
-    let mut custom_font_text = gfx_text::new(device.spawn_factory())
+    let mut normal_text = gfx_text::new(factory.clone()).unwrap();
+    let mut big_text = gfx_text::new(factory.clone()).with_size(20).unwrap();
+    let mut custom_font_text = gfx_text::new(factory.clone())
         .with_size(25)
         .with_font(FONT_PATH)
         .unwrap();

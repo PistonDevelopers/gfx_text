@@ -11,10 +11,10 @@ extern crate gfx;
 extern crate freetype;
 
 use std::marker::PhantomData;
-use gfx::{Factory, Resources, PrimitiveType, ProgramError, DrawError};
+use gfx::{Factory, Resources, PrimitiveType, ProgramError, DrawError, UpdateError};
 use gfx::traits::{FactoryExt, Output, Stream, ToIndexSlice, ToSlice};
 use gfx::handle::{Program, Buffer, Texture};
-use gfx::batch::OwnedBatch;
+use gfx::batch::Full as OwnedBatch;
 use gfx::batch::Error as BatchError;
 use gfx::tex::{self, TextureError};
 mod font;
@@ -46,6 +46,8 @@ pub enum Error {
     DrawError(DrawError<BatchError>),
     /// An error occuring at batch creation
     BatchError(BatchError),
+    /// An error occuring in buffer/texture updates
+    UpdateError(UpdateError<usize>),
 }
 
 impl From<ProgramError> for Error {
@@ -66,6 +68,10 @@ impl From<DrawError<BatchError>> for Error {
 
 impl From<BatchError> for Error {
     fn from(e: BatchError) -> Error { Error::BatchError(e) }
+}
+
+impl From<UpdateError<usize>> for Error {
+    fn from(e: UpdateError<usize>) -> Error { Error::UpdateError(e) }
 }
 
 type IndexT = u32;
@@ -334,8 +340,8 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         // Move vertex/index data.
         {
             let renderer = stream.access().0;
-            renderer.update_buffer(self.vertex_buffer.raw(), &self.vertex_data, 0);
-            renderer.update_buffer(self.index_buffer.raw(), &self.index_data, 0);
+            try!(renderer.update_buffer(self.vertex_buffer.raw(), &self.vertex_data, 0));
+            try!(renderer.update_buffer(self.index_buffer.raw(), &self.index_data, 0));
         }
         // Clear state.
         self.vertex_data.clear();
@@ -408,12 +414,12 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
         height: height,
         depth: 1,
         levels: 1,
-        kind: tex::TextureKind::Texture2D,
+        kind: tex::Kind::D2,
         format: tex::R8,
     }));
     try!(factory.update_texture_raw(
         &texture,
-        &texture.get_info().to_image_info(),
+        &(*texture.get_info()).into(),
         data,
         None,
     ));
