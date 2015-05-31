@@ -12,7 +12,7 @@ documentation = "http://docs.piston.rs/gfx_text/gfx_text/"
 
 [dependencies]
 gfx = "^0.6.0"
-freetype-rs = "~0.0.10"
+freetype-rs = "^0.1.0"
 
 [features]
 default = ["include-font"]
