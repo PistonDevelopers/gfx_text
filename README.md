@@ -25,6 +25,14 @@ text.draw_end(&mut stream);
 
 See [API documentation](http://docs.piston.rs/gfx_text/gfx_text/) for overview of all available methods.
 
+You can skip default font by disabling `include-font` feature:
+
+```
+[dependencies.gfx_text]
+version = "*"
+default-features = false
+```
+
 ## Examples
 
 See [this example](./examples/styles.rs) on how to draw text in various styles: different sizes, colors, fonts, etc.

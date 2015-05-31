@@ -37,6 +37,8 @@ pub struct BitmapChar {
 /// Represents possible errors which may occur during the font loading.
 #[derive(Debug)]
 pub enum FontError {
+    /// No font was specified
+    NoFont,
     /// Character set is empty
     EmptyFont,
     /// FreeType library error
