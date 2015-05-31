@@ -43,7 +43,6 @@ use font::BitmapFont;
 pub use font::FontError;
 
 const DEFAULT_FONT_SIZE: u8 = 16;
-const DEFAULT_FONT_DATA: &'static [u8] = include_bytes!("../assets/NotoSans-Regular.ttf");
 const DEFAULT_BUFFER_SIZE: usize = 128;
 const DEFAULT_OUTLINE_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 const DEFAULT_PROJECTION: [[f32; 4]; 4] = [
@@ -52,6 +51,13 @@ const DEFAULT_PROJECTION: [[f32; 4]; 4] = [
     [0.0, 0.0, 1.0, 0.0],
     [0.0, 0.0, 0.0, 1.0],
 ];
+
+#[cfg(feature = "include-font")]
+const DEFAULT_FONT_DATA: Option<&'static [u8]> =
+    Some(include_bytes!("../assets/NotoSans-Regular.ttf"));
+#[cfg(not(feature = "include-font"))]
+const DEFAULT_FONT_DATA: Option<&'static [u8]> =
+    None;
 
 /// General error type returned by the library. Wraps all other errors.
 #[derive(Debug)]
@@ -130,7 +136,7 @@ pub struct RendererBuilder<'r, R: Resources, F: Factory<R>> {
     // without manual annotation which is much worse. Anyway, it's possible to
     // just pass raw bytes.
     font_path: Option<&'r str>,
-    font_data: &'r [u8],
+    font_data: Option<&'r [u8]>,
     outline_width: Option<u8>,
     outline_color: [f32; 4],
     buffer_size: usize,
@@ -177,7 +183,7 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
 
     /// Pass raw font data.
     pub fn with_font_data(mut self, data: &'r [u8]) -> Self {
-        self.font_data = data;
+        self.font_data = Some(data);
         self
     }
 
@@ -222,8 +228,10 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
         let font_bitmap = try!(match self.font_path {
             Some(path) =>
                 BitmapFont::from_path(path, self.font_size, self.chars),
-            None =>
-                BitmapFont::from_bytes(self.font_data, self.font_size, self.chars),
+            None => match self.font_data {
+                Some(data) => BitmapFont::from_bytes(data, self.font_size, self.chars),
+                None => Err(FontError::NoFont),
+            },
         });
         let font_texture = try!(create_texture_r8_static(
             &mut self.factory,
