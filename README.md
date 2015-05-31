@@ -12,15 +12,15 @@ let mut text = gfx_text::new(factory).build().unwrap();
 
 // In render loop:
 
-// Draw some text 10 pixels down and right from the top left screen corner.
-text.draw(
-    "The quick brown fox jumps over the lazy dog",  // Text to draw
+// Add some text 10 pixels down and right from the top left screen corner.
+text.add(
+    "The quick brown fox jumps over the lazy dog",  // Text to add
     [10, 10],                                       // Position
     [0.65, 0.16, 0.16, 1.0],                        // Text color
 );
 
-// Render the final batch.
-text.draw_end(&mut stream);
+// Draw text.
+text.draw(&mut stream);
 ```
 
 See [API documentation](http://docs.piston.rs/gfx_text/gfx_text/) for overview of all available methods.

@@ -12,15 +12,15 @@
 //!
 //! // In render loop:
 //!
-//! // Draw some text 10 pixels down and right from the top left screen corner.
-//! text.draw(
-//!     "The quick brown fox jumps over the lazy dog",  // Text to draw
+//! // Add some text 10 pixels down and right from the top left screen corner.
+//! text.add(
+//!     "The quick brown fox jumps over the lazy dog",  // Text to add
 //!     [10, 10],                                       // Position
 //!     [0.65, 0.16, 0.16, 1.0],                        // Text color
 //! );
 //!
-//! // Render the final batch.
-//! text.draw_end(&mut stream);
+//! // Draw text.
+//! text.draw(&mut stream);
 //! ```
 
 #![deny(missing_docs)]
@@ -271,16 +271,16 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
 impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// Add some text to the current draw scene relative to the top left corner
     /// of the screen using pixel coordinates.
-    pub fn draw(&mut self, text: &str, pos: [i32; 2], color: [f32; 4]) {
-        self.draw_generic(text, Ok(pos), color)
+    pub fn add(&mut self, text: &str, pos: [i32; 2], color: [f32; 4]) {
+        self.add_generic(text, Ok(pos), color)
     }
 
     /// Add some text to the draw scene using absolute world coordinates.
-    pub fn draw_at(&mut self, text: &str, pos: [f32; 3], color: [f32; 4]) {
-        self.draw_generic(text, Err(pos), color)
+    pub fn add_at(&mut self, text: &str, pos: [f32; 3], color: [f32; 4]) {
+        self.add_generic(text, Err(pos), color)
     }
 
-    fn draw_generic(&mut self, text: &str, pos: Result<[i32; 2], [f32; 3]>, color: [f32; 4]) {
+    fn add_generic(&mut self, text: &str, pos: Result<[i32; 2], [f32; 3]>, color: [f32; 4]) {
         // `Result` is used here as an `Either` analogue.
         let (screen_pos, world_pos, screen_rel) = match pos {
             Ok(screen_pos) => (screen_pos, [0.0, 0.0, 0.0], 1),
@@ -354,31 +354,33 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         }
     }
 
-    /// End with drawing.
+    /// Draw the current scene and clear state.
     ///
     /// # Examples
     ///
     /// ```ignore
-    /// text.draw("Test1", [10, 10], [1.0, 0.0, 0.0, 1.0]);
-    /// text.draw("Test2", [20, 20], [0.0, 1.0, 0.0, 1.0]);
-    /// text.draw_end(&mut stream);
+    /// text.add("Test1", [10, 10], [1.0, 0.0, 0.0, 1.0]);
+    /// text.add("Test2", [20, 20], [0.0, 1.0, 0.0, 1.0]);
+    /// text.draw(&mut stream);
     /// ```
-    pub fn draw_end<S: Stream<R>>(&mut self, stream: &mut S)
-                    -> Result<(), Error> {
-        self.draw_end_at(stream, DEFAULT_PROJECTION)
+    pub fn draw<S: Stream<R>>(&mut self, stream: &mut S) -> Result<(), Error> {
+        self.draw_at(stream, DEFAULT_PROJECTION)
     }
 
-    /// End with drawing using provided projection matrix.
+    /// Draw using provided projection matrix.
     ///
     /// # Examples
     ///
     /// ```ignore
-    /// text.draw_at("Test1", [6.0, 0.0, 0.0], [1.0, 0.0, 0.0, 1.0]);
-    /// text.draw_at("Test2", [0.0, 5.0, 0.0], [0.0, 1.0, 0.0, 1.0]);
-    /// text.draw_end_at(&mut stream, camera_projection);
+    /// text.add_at("Test1", [6.0, 0.0, 0.0], [1.0, 0.0, 0.0, 1.0]);
+    /// text.add_at("Test2", [0.0, 5.0, 0.0], [0.0, 1.0, 0.0, 1.0]);
+    /// text.draw_at(&mut stream, camera_projection);
     /// ```
-    pub fn draw_end_at<S: Stream<R>>(&mut self, stream: &mut S,
-                       proj: [[f32; 4]; 4]) -> Result<(), Error> {
+    pub fn draw_at<S: Stream<R>>(
+        &mut self,
+        stream: &mut S,
+        proj: [[f32; 4]; 4]
+    ) -> Result<(), Error> {
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
@@ -422,7 +424,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         Ok(try!(stream.draw(&batch)))
     }
 
-    /// End with drawing and former resulting batch.
+    /// Former resulting batch.
     ///
     /// # Examples
     ///
@@ -435,7 +437,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         self.get_batch_at(output, DEFAULT_PROJECTION)
     }
 
-    /// Return batch for the given projection matrix.
+    /// Former batch for the given projection matrix.
     ///
     /// # Examples
     ///
