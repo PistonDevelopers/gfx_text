@@ -44,15 +44,15 @@ fn main() {
         }
         stream.clear(gfx::ClearData {color: WHITE, depth: 1.0, stencil: 0});
 
-        normal_text.draw("The quick brown fox jumps over the lazy dog", [10, 10], BROWN);
-        normal_text.draw("The quick red fox jumps over the lazy dog", [30, 30], RED);
-        normal_text.draw_end(&mut stream).unwrap();
+        normal_text.add("The quick brown fox jumps over the lazy dog", [10, 10], BROWN);
+        normal_text.add("The quick red fox jumps over the lazy dog", [30, 30], RED);
+        normal_text.draw(&mut stream).unwrap();
 
-        big_text.draw("The big brown fox jumps over the lazy dog", [50, 50], BROWN);
-        big_text.draw_end(&mut stream).unwrap();
+        big_text.add("The big brown fox jumps over the lazy dog", [50, 50], BROWN);
+        big_text.draw(&mut stream).unwrap();
 
-        custom_font_text.draw("The custom blue fox jumps over the lazy dog", [10, 80], BLUE);
-        custom_font_text.draw_end(&mut stream).unwrap();
+        custom_font_text.add("The custom blue fox jumps over the lazy dog", [10, 80], BLUE);
+        custom_font_text.draw(&mut stream).unwrap();
 
         stream.present(&mut device);
     }
