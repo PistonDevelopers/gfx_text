@@ -1,6 +1,27 @@
 //! A library for drawing text for gfx-rs graphics API.
 //! Uses freetype-rs underneath to former the font bitmap texture and collect
 //! information about face glyphs.
+//!
+//! # Examples
+//!
+//! Basic usage:
+//!
+//! ```ignore
+//! // Initialize text renderer.
+//! let mut text = gfx_text::new(factory).build().unwrap();
+//!
+//! // In render loop:
+//!
+//! // Draw some text 10 pixels down and right from the top left screen corner.
+//! text.draw(
+//!     "The quick brown fox jumps over the lazy dog",  // Text to draw
+//!     [10, 10],                                       // Position
+//!     [0.65, 0.16, 0.16, 1.0],                        // Text color
+//! );
+//!
+//! // Render the final batch.
+//! text.draw_end(&mut stream);
+//! ```
 
 #![deny(missing_docs)]
 
@@ -14,7 +35,7 @@ use std::marker::PhantomData;
 use gfx::{Factory, Resources, PrimitiveType, ProgramError, DrawError, UpdateError};
 use gfx::traits::{FactoryExt, Output, Stream, ToIndexSlice, ToSlice};
 use gfx::handle::{Program, Buffer, Texture};
-use gfx::batch::Full as OwnedBatch;
+use gfx::batch::Full as FullBatch;
 use gfx::batch::Error as BatchError;
 use gfx::tex::{self, TextureError};
 mod font;
@@ -32,8 +53,7 @@ const DEFAULT_PROJECTION: [[f32; 4]; 4] = [
     [0.0, 0.0, 0.0, 1.0],
 ];
 
-/// General error type returned by the library. Wraps other errors which may
-/// occur during some operations.
+/// General error type returned by the library. Wraps all other errors.
 #[derive(Debug)]
 pub enum Error {
     /// Program linking error
@@ -76,7 +96,7 @@ impl From<UpdateError<usize>> for Error {
 
 type IndexT = u32;
 
-/// Text renderer instance.
+/// Text renderer.
 pub struct Renderer<R: Resources, F: Factory<R>> {
     factory: F,
     program: Program<R>,
@@ -89,7 +109,19 @@ pub struct Renderer<R: Resources, F: Factory<R>> {
     params: ShaderParams<R>,
 }
 
-/// Text renderer builder instance.
+/// Text renderer builder. Allows to set rendering options using builder
+/// pattern.
+///
+/// # Examples
+///
+/// ```ignore
+/// let mut text = gfx_text::RendererBuilder::new(factory)
+///     .with_size(25)
+///     .with_font("/path/to/font.ttf")
+///     .with_chars(&['a', 'b', 'c'])
+///     .build()
+///     .unwrap();
+/// ```
 pub struct RendererBuilder<'r, R: Resources, F: Factory<R>> {
     factory: F,
     font_size: u8,
@@ -150,6 +182,7 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     }
 
     /// Specify outline width and color.
+    /// **Not implemented yet.**
     pub fn with_outline(mut self, width: u8, color: [f32; 4]) -> Self {
         self.outline_width = Some(width);
         self.outline_color = color;
@@ -229,12 +262,12 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
 
 impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// Add some text to the current draw scene relative to the top left corner
-    /// of the screen using pixel coords.
+    /// of the screen using pixel coordinates.
     pub fn draw(&mut self, text: &str, pos: [i32; 2], color: [f32; 4]) {
         self.draw_generic(text, Ok(pos), color)
     }
 
-    /// Add some text to the draw scene using absolute world coords.
+    /// Add some text to the draw scene using absolute world coordinates.
     pub fn draw_at(&mut self, text: &str, pos: [f32; 3], color: [f32; 4]) {
         self.draw_generic(text, Err(pos), color)
     }
@@ -313,13 +346,29 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         }
     }
 
-    /// End with drawing, clear internal state and return resulting batch.
+    /// End with drawing.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// text.draw("Test1", [10, 10], [1.0, 0.0, 0.0, 1.0]);
+    /// text.draw("Test2", [20, 20], [0.0, 1.0, 0.0, 1.0]);
+    /// text.draw_end(&mut stream);
+    /// ```
     pub fn draw_end<S: Stream<R>>(&mut self, stream: &mut S)
                     -> Result<(), Error> {
         self.draw_end_at(stream, DEFAULT_PROJECTION)
     }
 
     /// End with drawing using provided projection matrix.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// text.draw_at("Test1", [6.0, 0.0, 0.0], [1.0, 0.0, 0.0, 1.0]);
+    /// text.draw_at("Test2", [0.0, 5.0, 0.0], [0.0, 1.0, 0.0, 1.0]);
+    /// text.draw_end_at(&mut stream, camera_projection);
+    /// ```
     pub fn draw_end_at<S: Stream<R>>(&mut self, stream: &mut S,
                        proj: [[f32; 4]; 4]) -> Result<(), Error> {
         let ver_len = self.vertex_data.len();
@@ -366,14 +415,28 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     }
 
     /// End with drawing and former resulting batch.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let batch = text.get_batch(stream.get_output());
+    /// stream.draw(&batch);
+    /// ```
     pub fn get_batch<O: Output<R>>(&mut self, output: &O)
-                     -> Result<OwnedBatch<ShaderParams<R>>, Error> {
+                     -> Result<FullBatch<ShaderParams<R>>, Error> {
         self.get_batch_at(output, DEFAULT_PROJECTION)
     }
 
     /// Return batch for the given projection matrix.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let batch = text.get_batch_at(stream.get_output(), camera_projection);
+    /// stream.draw(&batch);
+    /// ```
     pub fn get_batch_at<O: Output<R>>(&mut self, output: &O, proj: [[f32; 4]; 4])
-                        -> Result<OwnedBatch<ShaderParams<R>>, Error> {
+                        -> Result<FullBatch<ShaderParams<R>>, Error> {
         let mesh = self.factory.create_mesh(&self.vertex_data);
         let slice = self.index_data.to_slice(&mut self.factory,
                                              PrimitiveType::TriangleList);
@@ -384,8 +447,8 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
             [w as f32, h as f32]
         };
         self.params.proj = proj;
-        let mut batch = try!(OwnedBatch::new(mesh, self.program.clone(),
-                                             self.params.clone()));
+        let mut batch = try!(FullBatch::new(mesh, self.program.clone(),
+                                            self.params.clone()));
         batch.slice = slice;
         Ok(batch)
     }
