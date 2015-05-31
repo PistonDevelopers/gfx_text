@@ -7,6 +7,7 @@ use std::iter::{repeat, FromIterator};
 use std::collections::{HashMap, HashSet};
 use std::char::from_u32;
 use ::freetype as ft;
+use ::freetype::Error as FreetypeError;
 use ::freetype::Face;
 
 #[derive(Debug)]
@@ -33,17 +34,17 @@ pub struct BitmapChar {
     data: Option<Vec<u8>>,
 }
 
-/// Represents possible errors that may occur during the font loading.
+/// Represents possible errors which may occur during the font loading.
 #[derive(Debug)]
 pub enum FontError {
     /// Character set is empty
     EmptyFont,
     /// FreeType library error
-    FreetypeError(ft::Error),
+    FreetypeError(FreetypeError),
 }
 
-impl From<ft::Error> for FontError {
-    fn from(e: ft::Error) -> FontError { FontError::FreetypeError(e) }
+impl From<FreetypeError> for FontError {
+    fn from(e: FreetypeError) -> FontError { FontError::FreetypeError(e) }
 }
 
 pub type FontResult = Result<BitmapFont, FontError>;
