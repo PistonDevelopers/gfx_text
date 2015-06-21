@@ -402,13 +402,16 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
             try!(renderer.update_buffer(self.vertex_buffer.raw(), &self.vertex_data, 0));
             try!(renderer.update_buffer(self.index_buffer.raw(), &self.index_data, 0));
         }
+        let nv = self.vertex_data.len() as gfx::VertexCount;
+        let ni = self.index_data.len() as gfx::VertexCount;
+
         // Clear state.
         self.vertex_data.clear();
         self.index_data.clear();
 
-        let nv = ind_len as gfx::VertexCount;
         let mesh = gfx::Mesh::from_format(self.vertex_buffer.clone(), nv);
-        let slice = self.index_buffer.to_slice(PrimitiveType::TriangleList);
+        let mut slice = self.index_buffer.to_slice(PrimitiveType::TriangleList);
+        slice.end = ni;
         self.params.screen_size = {
             let (w, h) = stream.get_output().get_size();
             [w as f32, h as f32]
