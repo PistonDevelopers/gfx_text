@@ -4,6 +4,7 @@ rust:
   - beta
   - nightly
 script:
+  - cargo build -v
   - cargo test -v
   - cargo doc -v
 after_success:
