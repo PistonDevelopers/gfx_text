@@ -31,6 +31,7 @@
 extern crate gfx;
 extern crate freetype;
 
+use std::cmp::max;
 use std::marker::PhantomData;
 use gfx::{Factory, Resources, PrimitiveType, ProgramError, DrawError, UpdateError};
 use gfx::traits::{FactoryExt, Output, Stream, ToIndexSlice, ToSlice};
@@ -74,6 +75,28 @@ pub enum Error {
     BatchError(BatchError),
     /// An error occuring in buffer/texture updates
     UpdateError(UpdateError<usize>),
+}
+
+/// An anchor aligns text horizontally to its given x position.
+#[derive(PartialEq)]
+pub enum HorizontalAnchor {
+    /// Anchor the left edge of the text
+    Left,
+    /// Anchor the horizontal mid-point of the text
+    Center,
+    /// Anchor the right edge of the text
+    Right,
+}
+
+/// An anchor aligns text vertically to its given y position.
+#[derive(PartialEq)]
+pub enum VerticalAnchor {
+    /// Anchor the top edge of the text
+    Top,
+    /// Anchor the vertical mid-point of the text
+    Center,
+    /// Anchor the bottom edge of the text
+    Bottom,
 }
 
 impl From<ProgramError> for Error {
@@ -275,6 +298,29 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         self.add_generic(text, Ok(pos), color)
     }
 
+    /// Add text to the draw scene by anchoring an edge or mid-point to a
+    /// position defined in screen pixel coordinates.
+    pub fn add_anchored(&mut self, text: &str, pos: [i32; 2], horizontal: HorizontalAnchor, vertical: VerticalAnchor, color: [f32; 4]) {
+        if horizontal == HorizontalAnchor::Left && vertical == VerticalAnchor::Top {
+            self.add_generic(text, Ok(pos), color);
+            return
+        }
+
+        let (width, height) = self.measure(text);
+        let x = match horizontal {
+            HorizontalAnchor::Left => pos[0],
+            HorizontalAnchor::Center => pos[0] - width / 2,
+            HorizontalAnchor::Right => pos[0] - width,
+        };
+        let y = match vertical {
+            VerticalAnchor::Top => pos[1],
+            VerticalAnchor::Center => pos[1] - height / 2,
+            VerticalAnchor::Bottom => pos[1] - height,
+        };
+
+        self.add_generic(text, Ok([x, y]), color)
+    }
+
     /// Add some text to the draw scene using absolute world coordinates.
     pub fn add_at(&mut self, text: &str, pos: [f32; 3], color: [f32; 4]) {
         self.add_generic(text, Err(pos), color)
@@ -464,6 +510,34 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
                                             self.params.clone()));
         batch.slice = slice;
         Ok(batch)
+    }
+
+    // TODO: Currently reports height based on the tallest glyph in the string.
+    // It might be more useful to go by the tallest in the whole font to avoid
+    // text jumping around as it changes.
+    /// Get the bounding box size of a string as rendered by this font.
+    pub fn measure(&self, text: &str) -> (i32, i32) {
+        let mut width = 0;
+        let mut height = 0;
+        let mut last_char = None;
+
+        for ch in text.chars() {
+            let ch_info = match self.font_bitmap.find_char(ch) {
+                Some(info) => info,
+                None => continue,
+            };
+            last_char = Some(ch_info);
+
+            width += ch_info.x_advance;
+            height = max(height, ch_info.y_offset + ch_info.height);
+        }
+
+        match last_char {
+            Some(info) => width += info.x_offset + info.width - info.x_advance,
+            None => (),
+        }
+
+        (width, height)
     }
 }
 
