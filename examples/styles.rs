@@ -34,6 +34,11 @@ fn main() {
         .with_font(FONT_PATH)
         .unwrap();
 
+    let centre_message = "hello centred world";
+    let (hx, hy) = normal_text.measure(centre_message);
+    let bottom_message = "I live in the bottom right";
+    let (bx, by) = custom_font_text.measure(bottom_message);
+
     'main: loop {
         for event in stream.out.window.poll_events() {
             match event {
@@ -46,12 +51,14 @@ fn main() {
 
         normal_text.add("The quick brown fox jumps over the lazy dog", [10, 10], BROWN);
         normal_text.add("The quick red fox jumps over the lazy dog", [30, 30], RED);
+        normal_text.add(centre_message, [(640 - hx) / 2, (480 - hy) / 2], BLUE);
         normal_text.draw(&mut stream).unwrap();
 
         big_text.add("The big brown fox jumps over the lazy dog", [50, 50], BROWN);
         big_text.draw(&mut stream).unwrap();
 
         custom_font_text.add("The custom blue fox jumps over the lazy dog", [10, 80], BLUE);
+        custom_font_text.add(bottom_message, [639 - bx, 479 - by], RED);
         custom_font_text.draw(&mut stream).unwrap();
 
         stream.present(&mut device);
