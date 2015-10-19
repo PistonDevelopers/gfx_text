@@ -77,6 +77,28 @@ pub enum Error {
     UpdateError(UpdateError<usize>),
 }
 
+/// An anchor aligns text horizontally to its given x position.
+#[derive(PartialEq)]
+pub enum HorizontalAnchor {
+    /// Anchor the left edge of the text
+    Left,
+    /// Anchor the horizontal mid-point of the text
+    Center,
+    /// Anchor the right edge of the text
+    Right,
+}
+
+/// An anchor aligns text vertically to its given y position.
+#[derive(PartialEq)]
+pub enum VerticalAnchor {
+    /// Anchor the top edge of the text
+    Top,
+    /// Anchor the vertical mid-point of the text
+    Center,
+    /// Anchor the bottom edge of the text
+    Bottom,
+}
+
 impl From<ProgramError> for Error {
     fn from(e: ProgramError) -> Error { Error::ProgramError(e) }
 }
@@ -274,6 +296,29 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// of the screen using pixel coordinates.
     pub fn add(&mut self, text: &str, pos: [i32; 2], color: [f32; 4]) {
         self.add_generic(text, Ok(pos), color)
+    }
+
+    /// Add text to the draw scene by anchoring an edge or mid-point to a
+    /// position defined in screen pixel coordinates.
+    pub fn add_anchored(&mut self, text: &str, pos: [i32; 2], horizontal: HorizontalAnchor, vertical: VerticalAnchor, color: [f32; 4]) {
+        if horizontal == HorizontalAnchor::Left && vertical == VerticalAnchor::Top {
+            self.add_generic(text, Ok(pos), color);
+            return
+        }
+
+        let (width, height) = self.measure(text);
+        let x = match horizontal {
+            HorizontalAnchor::Left => pos[0],
+            HorizontalAnchor::Center => pos[0] - width / 2,
+            HorizontalAnchor::Right => pos[0] - width,
+        };
+        let y = match vertical {
+            VerticalAnchor::Top => pos[1],
+            VerticalAnchor::Center => pos[1] - height / 2,
+            VerticalAnchor::Bottom => pos[1] - height,
+        };
+
+        self.add_generic(text, Ok([x, y]), color)
     }
 
     /// Add some text to the draw scene using absolute world coordinates.
