@@ -12,7 +12,7 @@ documentation = "http://docs.piston.rs/gfx_text/gfx_text/"
 
 [dependencies]
 gfx = "0.8"
-freetype-rs = "^0.3.0"
+freetype-rs = "0.3"
 
 [features]
 default = ["include-font"]
@@ -21,7 +21,7 @@ include-font = []
 ### For examples
 
 [dev-dependencies]
-log = "*"
-env_logger = "*"
 gfx_window_glutin = "0.7"
 glutin = "0.4"
+#log = "*"
+#env_logger = "*"
