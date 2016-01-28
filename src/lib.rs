@@ -20,7 +20,7 @@
 //! );
 //!
 //! // Draw text.
-//! text.draw(&mut stream);
+//! text.draw(&mut encoder, color_output.clone()).unwrap();
 //! ```
 
 #![deny(missing_docs)]
@@ -33,7 +33,8 @@ extern crate freetype;
 
 use std::cmp::max;
 use std::marker::PhantomData;
-use gfx::{CommandBuffer, Encoder, Factory, Resources, UpdateError};
+use gfx::{CommandBuffer, Encoder, Factory, PipelineStateError, Resources, UpdateError};
+use gfx::core::factory::CombinedError;
 use gfx::handle::{Buffer, RenderTargetView};
 use gfx::pso::PipelineState;
 use gfx::tex;
@@ -64,8 +65,10 @@ const DEFAULT_FONT_DATA: Option<&'static [u8]> =
 pub enum Error {
     /// Font loading error
     FontError(FontError),
-    /// Texture creation/update error
-    TextureError(tex::Error),
+    /// Pipeline creation/update error
+    PipelineError(PipelineStateError),
+    /// An error occuring during creation of texture or resource view
+    CombinedError(CombinedError),
     /// An error occuring in buffer/texture updates
     UpdateError(UpdateError<usize>),
 }
@@ -96,8 +99,12 @@ impl From<FontError> for Error {
     fn from(e: FontError) -> Error { Error::FontError(e) }
 }
 
-impl From<tex::Error> for Error {
-    fn from(e: tex::Error) -> Error { Error::TextureError(e) }
+impl From<PipelineStateError> for Error {
+    fn from(e: PipelineStateError) -> Error { Error::PipelineError(e) }
+}
+
+impl From<CombinedError> for Error {
+    fn from(e: CombinedError) -> Error { Error::CombinedError(e) }
 }
 
 impl From<UpdateError<usize>> for Error {
@@ -245,12 +252,12 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
                                   tex::WrapMode::Clamp)
         );
 
-        let pso = self.factory.create_pipeline_simple(
+        let pso = try!(self.factory.create_pipeline_simple(
             VERTEX_SRC,
             FRAGMENT_SRC,
             gfx::state::CullFace::Back,
             pipe::new()
-        ).unwrap(); // TODO: Handle Error
+        ));
 
         Ok(Renderer {
             factory: self.factory,
@@ -411,27 +418,26 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
         let ind_buf_len = self.index_buffer.len();
+
         // Reallocate buffers if there is no enough space for data.
         if ver_len > ver_buf_len {
-            self.vertex_buffer = self.factory.create_buffer_dynamic(
-                grow_buffer_size(ver_buf_len, ver_len),
-                gfx::BufferRole::Vertex
-            );
+            let len = grow_buffer_size(ver_buf_len, ver_len);
+            self.vertex_buffer = self.factory.create_buffer_dynamic(len, gfx::BufferRole::Vertex);
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
             self.index_buffer = self.factory.create_buffer_dynamic(len, gfx::BufferRole::Index);
         }
-        //try!(encoder.update_buffer(&self.vertex_buffer, &self.vertex_data, 0));
-        //try!(encoder.update_buffer(&self.index_buffer, &self.index_data, 0));
-        //let nv = self.vertex_data.len() as gfx::VertexCount;
-        //let ni = self.index_data.len() as gfx::VertexCount;
 
-        // TODO: DONT USE THIS, update the buffer as above instead
-        let (vbuf, slice) = self.factory.create_vertex_buffer_indexed(&self.vertex_data, &self.index_data[..]);
+        try!(encoder.update_buffer(&self.vertex_buffer, &self.vertex_data, 0));
+        try!(encoder.update_buffer(&self.index_buffer, &self.index_data, 0));
+
+        let ni = self.index_data.len() as gfx::VertexCount;
+        let mut slice: gfx::Slice<R> = self.index_buffer.clone().into();
+        slice.end = ni;
 
         let data = pipe::Data {
-            vbuf: vbuf,
+            vbuf: self.vertex_buffer.clone(),
             proj: proj,
             screen_size: {
                 // TODO: Is there a public interface to find a RenderTargetView's size?
@@ -497,14 +503,12 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
     width: u16,
     height: u16,
     data: &[u8],
-) -> Result<gfx::handle::ShaderResourceView<R, f32>, tex::Error> {
+) -> Result<gfx::handle::ShaderResourceView<R, f32>, CombinedError> {
     let kind = tex::Kind::D2(width, height, tex::AaMode::Single);
-    match factory.create_texture_const::<(gfx::format::R8, gfx::format::Unorm)>(kind, gfx::cast_slice(&data), false) {
-        Ok((_, texture_view)) => Ok(texture_view),
-        // TODO: Actually determine the error, gfx returns a type which is not publiclly exported here,
-        //       so there's no way to find what actually went wrong.
-        Err(_) => Err(tex::Error::Kind),
-    }
+    let (_, texture_view) = try!(
+        factory.create_texture_const::<(gfx::format::R8, gfx::format::Unorm)>(kind, gfx::cast_slice(&data), false)
+    );
+    Ok(texture_view)
 }
 
 // Hack to hide shader structs from the library user.
