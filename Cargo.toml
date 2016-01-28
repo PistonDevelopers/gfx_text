@@ -1,6 +1,6 @@
 [package]
 name = "gfx_text"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Kagami Hiiragi <kagami@genshiken.org>"]
 description = "Draw text for gfx using freetype."
 keywords = ["gfx", "graphics", "text", "freetype", "font"]
@@ -11,7 +11,7 @@ repository = "https://github.com/PistonDevelopers/gfx_text.git"
 documentation = "http://docs.piston.rs/gfx_text/gfx_text/"
 
 [dependencies]
-gfx = "0.8"
+gfx = "0.9"
 freetype-rs = "0.5.0"
 
 [features]
@@ -21,7 +21,7 @@ include-font = []
 ### For examples
 
 [dev-dependencies]
-gfx_window_glutin = "0.8.0"
+gfx_window_glutin = "0.9.0"
 glutin = "0.4"
 #log = "*"
 #env_logger = "*"
