@@ -440,10 +440,8 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
             vbuf: self.vertex_buffer.clone(),
             proj: proj,
             screen_size: {
-                // TODO: Is there a public interface to find a RenderTargetView's size?
-                //let (w, h) = target.raw().get_dimensions();
-                //[w as f32, h as f32]
-                [640.0, 480.0] // TODO: FIXTHIS
+                let (w, h, _, _) = target.get_dimensions();
+                [w as f32, h as f32]
             },
             color: self.color.clone(),
             out_color: target.clone(),
