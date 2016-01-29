@@ -20,7 +20,7 @@
 //! );
 //!
 //! // Draw text.
-//! text.draw(&mut encoder, color_output.clone()).unwrap();
+//! text.draw(&mut encoder, &color_output).unwrap();
 //! ```
 
 #![deny(missing_docs)]
@@ -115,7 +115,7 @@ type IndexT = u32;
 
 /// Text renderer.
 pub struct Renderer<R: Resources, F: Factory<R>> {
-    factory: F, // TODO: Can we avoid hanging on to this?
+    factory: F,
     pso: PipelineState<R, pipe::Meta>,
     vertex_data: Vec<Vertex>,
     vertex_buffer: Buffer<R, Vertex>,
@@ -393,9 +393,9 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// ```ignore
     /// text.add("Test1", [10, 10], [1.0, 0.0, 0.0, 1.0]);
     /// text.add("Test2", [20, 20], [0.0, 1.0, 0.0, 1.0]);
-    /// text.draw(&mut encoder, color_output.clone()).unwrap();
+    /// text.draw(&mut encoder, &color_output).unwrap();
     /// ```
-    pub fn draw<C: CommandBuffer<R>>(&mut self, encoder: &mut Encoder<R, C>, target: RenderTargetView<R, gfx::format::Rgba8>) -> Result<(), Error> {
+    pub fn draw<C: CommandBuffer<R>>(&mut self, encoder: &mut Encoder<R, C>, target: &RenderTargetView<R, gfx::format::Rgba8>) -> Result<(), Error> {
         self.draw_at(encoder, target, DEFAULT_PROJECTION)
     }
 
@@ -406,12 +406,12 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// ```ignore
     /// text.add_at("Test1", [6.0, 0.0, 0.0], [1.0, 0.0, 0.0, 1.0]);
     /// text.add_at("Test2", [0.0, 5.0, 0.0], [0.0, 1.0, 0.0, 1.0]);
-    /// text.draw_at(&mut encoder, color_output.clone(), camera_projection).unwrap();
+    /// text.draw_at(&mut encoder, &color_output, camera_projection).unwrap();
     /// ```
     pub fn draw_at<C: CommandBuffer<R>>(
         &mut self,
         encoder: &mut Encoder<R, C>,
-        target: RenderTargetView<R, gfx::format::Rgba8>,
+        target: &RenderTargetView<R, gfx::format::Rgba8>,
         proj: [[f32; 4]; 4]
     ) -> Result<(), Error> {
         let ver_len = self.vertex_data.len();
@@ -446,7 +446,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
                 [640.0, 480.0] // TODO: FIXTHIS
             },
             color: self.color.clone(),
-            out_color: target,
+            out_color: target.clone(),
         };
 
         // Clear state.

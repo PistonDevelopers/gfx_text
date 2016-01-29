@@ -60,9 +60,9 @@ fn main() {
         encoder.reset();
         encoder.clear(&main_color, WHITE);
 
-        normal_text.draw(&mut encoder, main_color.clone()).unwrap();
-        big_text.draw(&mut encoder, main_color.clone()).unwrap();
-        custom_font_text.draw(&mut encoder, main_color.clone()).unwrap();
+        normal_text.draw(&mut encoder, &main_color).unwrap();
+        big_text.draw(&mut encoder, &main_color).unwrap();
+        custom_font_text.draw(&mut encoder, &main_color).unwrap();
 
         device.submit(encoder.as_buffer());
         window.swap_buffers().unwrap();
