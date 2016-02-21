@@ -598,7 +598,7 @@ mod shader_structs {
 use shader_structs::{Vertex, ShaderParams};
 
 const VERTEX_SRC: &'static [u8] = b"
-    #version 150 core
+    #version 130
 
     in vec2 a_Pos;
     in vec4 a_Color;
@@ -631,7 +631,7 @@ const VERTEX_SRC: &'static [u8] = b"
 ";
 
 const FRAGMENT_SRC: &'static [u8] = b"
-    #version 150 core
+    #version 130
 
     in vec4 v_Color;
     in vec2 v_TexCoord;
