@@ -23,7 +23,7 @@ fn main() {
             .with_dimensions(640, 480)
             .with_title(format!("gfx_text example"))
             .with_gl(GL_CORE);
-        gfxw::init::<gfx::format::Rgba8>(builder)
+        gfxw::init::<gfx::format::Rgba8, gfx::format::Depth>(builder)
     };
     let mut encoder = factory.create_encoder();
 
