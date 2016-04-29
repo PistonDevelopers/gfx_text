@@ -1,6 +1,5 @@
 // extern crate env_logger;
 extern crate gfx;
-extern crate gfx_device_gl;
 extern crate gfx_window_glutin;
 extern crate glutin;
 extern crate gfx_text;
@@ -9,8 +8,6 @@ use gfx::traits::Device;
 use gfx_window_glutin as gfxw;
 use gfx_text::{HorizontalAnchor, VerticalAnchor};
 use glutin::{WindowBuilder, Event, VirtualKeyCode, GL_CORE};
-
-type Encoder = gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>;
 
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BROWN: [f32; 4] = [0.65, 0.16, 0.16, 1.0];
@@ -28,7 +25,7 @@ fn main() {
             .with_gl(GL_CORE);
         gfxw::init::<gfx::format::Rgba8, gfx::format::Depth>(builder)
     };
-    let mut encoder: Encoder = factory.create_command_buffer().into();
+    let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
     let mut normal_text = gfx_text::new(factory.clone()).unwrap();
     let mut big_text = gfx_text::new(factory.clone()).with_size(20).unwrap();
@@ -66,7 +63,7 @@ fn main() {
         big_text.draw(&mut encoder, &main_color).unwrap();
         custom_font_text.draw(&mut encoder, &main_color).unwrap();
 
-		encoder.flush(&mut device);
+        encoder.flush(&mut device);
         window.swap_buffers().unwrap();
         device.cleanup();
     }

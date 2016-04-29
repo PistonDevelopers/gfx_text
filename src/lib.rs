@@ -116,12 +116,12 @@ type IndexT = u32;
 pub struct Renderer<R: Resources, F: Factory<R>> {
     factory: F,
     pso: PipelineState<R, pipe::Meta>,
-	vertex_data: Vec<Vertex>,
+    vertex_data: Vec<Vertex>,
     vertex_buffer: Buffer<R, Vertex>,
     index_data: Vec<IndexT>,
     index_buffer: Buffer<R, IndexT>,
     font_bitmap: BitmapFont,
-	color: (gfx::handle::ShaderResourceView<R, f32>, gfx::handle::Sampler<R>),
+    color: (gfx::handle::ShaderResourceView<R, f32>, gfx::handle::Sampler<R>),
 }
 
 /// Text renderer builder. Allows to set rendering options using builder
@@ -218,16 +218,16 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     }
 
     /// Build a new text renderer instance using current settings.
-	pub fn build(mut self) -> Result<Renderer<R, F>, Error> {
+    pub fn build(mut self) -> Result<Renderer<R, F>, Error> {
         let vertex_buffer = self.factory.create_buffer_dynamic(
             self.buffer_size,
             gfx::BufferRole::Vertex,
-        	gfx::Bind::empty()
-		).expect("Could not create vertex buffer");
+            gfx::Bind::empty()
+        ).expect("Could not create vertex buffer");
         let index_buffer = self.factory.create_buffer_dynamic(
             self.buffer_size,
             gfx::BufferRole::Index,
-			gfx::Bind::empty()
+            gfx::Bind::empty()
         ).expect("Count not create index buffer");
 
         // Initialize bitmap font.
@@ -396,11 +396,11 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// text.add("Test2", [20, 20], [0.0, 1.0, 0.0, 1.0]);
     /// text.draw(&mut encoder, &color_output).unwrap();
     /// ```
-	pub fn draw<C: CommandBuffer<R>>(
-		&mut self,
-		encoder: &mut Encoder<R, C>,
-		target: &RenderTargetView<R, gfx::format::Rgba8>
-	) -> Result<(), Error> {
+    pub fn draw<C: CommandBuffer<R>>(
+        &mut self,
+        encoder: &mut Encoder<R, C>,
+        target: &RenderTargetView<R, gfx::format::Rgba8>
+    ) -> Result<(), Error> {
         self.draw_at(encoder, target, DEFAULT_PROJECTION)
     }
 
@@ -413,7 +413,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// text.add_at("Test2", [0.0, 5.0, 0.0], [0.0, 1.0, 0.0, 1.0]);
     /// text.draw_at(&mut encoder, &color_output, camera_projection).unwrap();
     /// ```
-	pub fn draw_at<C: CommandBuffer<R>>(
+    pub fn draw_at<C: CommandBuffer<R>>(
         &mut self,
         encoder: &mut Encoder<R, C>,
         target: &RenderTargetView<R, gfx::format::Rgba8>,
@@ -428,14 +428,14 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         if ver_len > ver_buf_len {
             let len = grow_buffer_size(ver_buf_len, ver_len);
             self.vertex_buffer = self.factory.create_buffer_dynamic(
-					len, gfx::BufferRole::Vertex, gfx::Bind::empty()
-				).expect("Could not reallocate vertex buffer");
+                    len, gfx::BufferRole::Vertex, gfx::Bind::empty()
+                ).expect("Could not reallocate vertex buffer");
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
             self.index_buffer = self.factory.create_buffer_dynamic(
-					len, gfx::BufferRole::Index, gfx::Bind::empty()
-				).expect("Could not reallocate index buffer");
+                    len, gfx::BufferRole::Index, gfx::Bind::empty()
+                ).expect("Could not reallocate index buffer");
         }
 
         try!(encoder.update_buffer(&self.vertex_buffer, &self.vertex_data, 0));
@@ -529,7 +529,7 @@ mod shader_structs {
         color: [f32; 4] = "a_Color",
     });
 
-	gfx_pipeline!( pipe {
+    gfx_pipeline!( pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
         screen_size: gfx::Global<[f32; 2]> = "u_Screen_Size",
         proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",

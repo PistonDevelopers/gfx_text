@@ -22,7 +22,6 @@ include-font = []
 
 [dev-dependencies]
 gfx_window_glutin = "0.10.0"
-gfx_device_gl = "0.9.0"
 glutin = "0.4.8"
 #log = "*"
 #env_logger = "*"
