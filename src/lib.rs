@@ -33,12 +33,11 @@ extern crate freetype;
 
 use std::cmp::max;
 use std::marker::PhantomData;
-use gfx::{Factory, Resources, PrimitiveType, ProgramError, DrawError, UpdateError};
-use gfx::traits::{FactoryExt, Output, Stream, ToIndexSlice, ToSlice};
-use gfx::handle::{Program, Buffer, Texture};
-use gfx::batch::Full as FullBatch;
-use gfx::batch::Error as BatchError;
-use gfx::tex::{self, TextureError};
+use gfx::{CombinedError, CommandBuffer, Encoder, Factory, PipelineStateError, Resources, UpdateError};
+use gfx::handle::{Buffer, RenderTargetView};
+use gfx::pso::PipelineState;
+use gfx::tex;
+use gfx::traits::FactoryExt;
 mod font;
 use font::BitmapFont;
 pub use font::FontError;
@@ -63,16 +62,12 @@ const DEFAULT_FONT_DATA: Option<&'static [u8]> =
 /// General error type returned by the library. Wraps all other errors.
 #[derive(Debug)]
 pub enum Error {
-    /// Program linking error
-    ProgramError(ProgramError),
     /// Font loading error
     FontError(FontError),
-    /// Texture creation/updation error
-    TextureError(TextureError),
-    /// Draw-time error
-    DrawError(DrawError<BatchError>),
-    /// An error occuring at batch creation
-    BatchError(BatchError),
+    /// Pipeline creation/update error
+    PipelineError(PipelineStateError),
+    /// An error occuring during creation of texture or resource view
+    CombinedError(CombinedError),
     /// An error occuring in buffer/texture updates
     UpdateError(UpdateError<usize>),
 }
@@ -99,24 +94,16 @@ pub enum VerticalAnchor {
     Bottom,
 }
 
-impl From<ProgramError> for Error {
-    fn from(e: ProgramError) -> Error { Error::ProgramError(e) }
-}
-
 impl From<FontError> for Error {
     fn from(e: FontError) -> Error { Error::FontError(e) }
 }
 
-impl From<TextureError> for Error {
-    fn from(e: TextureError) -> Error { Error::TextureError(e) }
+impl From<PipelineStateError> for Error {
+    fn from(e: PipelineStateError) -> Error { Error::PipelineError(e) }
 }
 
-impl From<DrawError<BatchError>> for Error {
-    fn from(e: DrawError<BatchError>) -> Error { Error::DrawError(e) }
-}
-
-impl From<BatchError> for Error {
-    fn from(e: BatchError) -> Error { Error::BatchError(e) }
+impl From<CombinedError> for Error {
+    fn from(e: CombinedError) -> Error { Error::CombinedError(e) }
 }
 
 impl From<UpdateError<usize>> for Error {
@@ -128,14 +115,13 @@ type IndexT = u32;
 /// Text renderer.
 pub struct Renderer<R: Resources, F: Factory<R>> {
     factory: F,
-    program: Program<R>,
-    draw_state: gfx::DrawState,
+    pso: PipelineState<R, pipe::Meta>,
     vertex_data: Vec<Vertex>,
     vertex_buffer: Buffer<R, Vertex>,
     index_data: Vec<IndexT>,
     index_buffer: Buffer<R, IndexT>,
     font_bitmap: BitmapFont,
-    params: ShaderParams<R>,
+    color: (gfx::handle::ShaderResourceView<R, f32>, gfx::handle::Sampler<R>),
 }
 
 /// Text renderer builder. Allows to set rendering options using builder
@@ -233,16 +219,16 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
 
     /// Build a new text renderer instance using current settings.
     pub fn build(mut self) -> Result<Renderer<R, F>, Error> {
-        let program = try!(self.factory.link_program(VERTEX_SRC, FRAGMENT_SRC));
-        let state = gfx::DrawState::new().blend(gfx::BlendPreset::Alpha);
         let vertex_buffer = self.factory.create_buffer_dynamic(
             self.buffer_size,
             gfx::BufferRole::Vertex,
-        );
+            gfx::Bind::empty()
+        ).expect("Could not create vertex buffer");
         let index_buffer = self.factory.create_buffer_dynamic(
             self.buffer_size,
-            gfx::BufferRole::Index
-        );
+            gfx::BufferRole::Index,
+            gfx::Bind::empty()
+        ).expect("Count not create index buffer");
 
         // Initialize bitmap font.
         // TODO(Kagami): Outline!
@@ -267,21 +253,22 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
                                   tex::WrapMode::Clamp)
         );
 
+        let pso = try!(self.factory.create_pipeline_simple(
+            VERTEX_SRC,
+            FRAGMENT_SRC,
+            gfx::state::CullFace::Back,
+            pipe::new()
+        ));
+
         Ok(Renderer {
             factory: self.factory,
-            program: program,
-            draw_state: state,
+            pso: pso,
             vertex_data: Vec::new(),
             vertex_buffer: vertex_buffer,
             index_data: Vec::new(),
             index_buffer: index_buffer,
             font_bitmap: font_bitmap,
-            params: ShaderParams {
-                color: (font_texture, Some(sampler)),
-                screen_size: [0.0, 0.0],
-                proj: DEFAULT_PROJECTION,
-                _r: PhantomData,
-            },
+            color: (font_texture, sampler),
         })
     }
 
@@ -407,10 +394,14 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// ```ignore
     /// text.add("Test1", [10, 10], [1.0, 0.0, 0.0, 1.0]);
     /// text.add("Test2", [20, 20], [0.0, 1.0, 0.0, 1.0]);
-    /// text.draw(&mut stream);
+    /// text.draw(&mut encoder, &color_output).unwrap();
     /// ```
-    pub fn draw<S: Stream<R>>(&mut self, stream: &mut S) -> Result<(), Error> {
-        self.draw_at(stream, DEFAULT_PROJECTION)
+    pub fn draw<C: CommandBuffer<R>>(
+        &mut self,
+        encoder: &mut Encoder<R, C>,
+        target: &RenderTargetView<R, gfx::format::Rgba8>
+    ) -> Result<(), Error> {
+        self.draw_at(encoder, target, DEFAULT_PROJECTION)
     }
 
     /// Draw using provided projection matrix.
@@ -420,96 +411,57 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// ```ignore
     /// text.add_at("Test1", [6.0, 0.0, 0.0], [1.0, 0.0, 0.0, 1.0]);
     /// text.add_at("Test2", [0.0, 5.0, 0.0], [0.0, 1.0, 0.0, 1.0]);
-    /// text.draw_at(&mut stream, camera_projection);
+    /// text.draw_at(&mut encoder, &color_output, camera_projection).unwrap();
     /// ```
-    pub fn draw_at<S: Stream<R>>(
+    pub fn draw_at<C: CommandBuffer<R>>(
         &mut self,
-        stream: &mut S,
+        encoder: &mut Encoder<R, C>,
+        target: &RenderTargetView<R, gfx::format::Rgba8>,
         proj: [[f32; 4]; 4]
     ) -> Result<(), Error> {
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
         let ind_buf_len = self.index_buffer.len();
+
         // Reallocate buffers if there is no enough space for data.
         if ver_len > ver_buf_len {
+            let len = grow_buffer_size(ver_buf_len, ver_len);
             self.vertex_buffer = self.factory.create_buffer_dynamic(
-                grow_buffer_size(ver_buf_len, ver_len),
-                gfx::BufferRole::Vertex
-            );
+                    len, gfx::BufferRole::Vertex, gfx::Bind::empty()
+                ).expect("Could not reallocate vertex buffer");
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
-            self.index_buffer = self.factory.create_buffer_dynamic(len, gfx::BufferRole::Index);
+            self.index_buffer = self.factory.create_buffer_dynamic(
+                    len, gfx::BufferRole::Index, gfx::Bind::empty()
+                ).expect("Could not reallocate index buffer");
         }
-        // Move vertex/index data.
-        {
-            let renderer = stream.access().0;
-            try!(renderer.update_buffer(self.vertex_buffer.raw(), &self.vertex_data, 0));
-            try!(renderer.update_buffer(self.index_buffer.raw(), &self.index_data, 0));
-        }
-        let nv = self.vertex_data.len() as gfx::VertexCount;
+
+        try!(encoder.update_buffer(&self.vertex_buffer, &self.vertex_data, 0));
+        try!(encoder.update_buffer(&self.index_buffer, &self.index_data, 0));
+
         let ni = self.index_data.len() as gfx::VertexCount;
+        let mut slice: gfx::Slice<R> = self.index_buffer.clone().into();
+        slice.end = ni;
+
+        let data = pipe::Data {
+            vbuf: self.vertex_buffer.clone(),
+            proj: proj,
+            screen_size: {
+                let (w, h, _, _) = target.get_dimensions();
+                [w as f32, h as f32]
+            },
+            color: self.color.clone(),
+            out_color: target.clone(),
+        };
 
         // Clear state.
         self.vertex_data.clear();
         self.index_data.clear();
 
-        let mesh = gfx::Mesh::from_format(self.vertex_buffer.clone(), nv);
-        let mut slice = self.index_buffer.to_slice(PrimitiveType::TriangleList);
-        slice.end = ni;
-        self.params.screen_size = {
-            let (w, h) = stream.get_output().get_size();
-            [w as f32, h as f32]
-        };
-        self.params.proj = proj;
-        let batch = gfx::batch::bind(
-            &self.draw_state,
-            &mesh,
-            slice,
-            &self.program,
-            &self.params);
-
-        Ok(try!(stream.draw(&batch)))
-    }
-
-    /// Former resulting batch.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let batch = text.get_batch(stream.get_output());
-    /// stream.draw(&batch);
-    /// ```
-    pub fn get_batch<O: Output<R>>(&mut self, output: &O)
-                     -> Result<FullBatch<ShaderParams<R>>, Error> {
-        self.get_batch_at(output, DEFAULT_PROJECTION)
-    }
-
-    /// Former batch for the given projection matrix.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let batch = text.get_batch_at(stream.get_output(), camera_projection);
-    /// stream.draw(&batch);
-    /// ```
-    pub fn get_batch_at<O: Output<R>>(&mut self, output: &O, proj: [[f32; 4]; 4])
-                        -> Result<FullBatch<ShaderParams<R>>, Error> {
-        let mesh = self.factory.create_mesh(&self.vertex_data);
-        let slice = self.index_data.to_slice(&mut self.factory,
-                                             PrimitiveType::TriangleList);
-        self.vertex_data.clear();
-        self.index_data.clear();
-        self.params.screen_size = {
-            let (w, h) = output.get_size();
-            [w as f32, h as f32]
-        };
-        self.params.proj = proj;
-        let mut batch = try!(FullBatch::new(mesh, self.program.clone(),
-                                            self.params.clone()));
-        batch.slice = slice;
-        Ok(batch)
+        encoder.draw(&slice, &self.pso, &data);
+        Ok(())
     }
 
     // TODO: Currently reports height based on the tallest glyph in the string.
@@ -558,44 +510,34 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
     width: u16,
     height: u16,
     data: &[u8],
-) -> Result<Texture<R>, TextureError> {
-    let texture = try!(factory.create_texture(tex::TextureInfo {
-        width: width,
-        height: height,
-        depth: 1,
-        levels: 1,
-        kind: tex::Kind::D2,
-        format: tex::R8,
-    }));
-    try!(factory.update_texture_raw(
-        &texture,
-        &(*texture.get_info()).into(),
-        data,
-        None,
-    ));
-    Ok(texture)
+) -> Result<gfx::handle::ShaderResourceView<R, f32>, CombinedError> {
+    let kind = tex::Kind::D2(width, height, tex::AaMode::Single);
+    let (_, texture_view) = try!(
+        factory.create_texture_const::<(gfx::format::R8, gfx::format::Unorm)>(kind, &[data])
+    );
+    Ok(texture_view)
 }
 
 // Hack to hide shader structs from the library user.
 mod shader_structs {
-    use gfx::shade::TextureParam;
-
-    gfx_vertex!( Vertex {
-        a_Pos@ pos: [f32; 2],
-        a_TexCoord@ tex: [f32; 2],
-        a_World_Pos@ world_pos: [f32; 3],
+    gfx_vertex_struct!( Vertex {
+        pos: [f32; 2] = "a_Pos",
+        tex: [f32; 2] = "a_TexCoord",
+        world_pos: [f32; 3] = "a_World_Pos",
         // Should be bool but gfx-rs doesn't support it.
-        a_Screen_Rel@ screen_rel: i32,
-        a_Color@ color: [f32; 4],
+        screen_rel: i32 = "a_Screen_Rel",
+        color: [f32; 4] = "a_Color",
     });
 
-    gfx_parameters!( ShaderParams {
-        t_Color@ color: TextureParam<R>,
-        u_Screen_Size@ screen_size: [f32; 2],
-        u_Proj@ proj: [[f32; 4]; 4],
+    gfx_pipeline!( pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+        screen_size: gfx::Global<[f32; 2]> = "u_Screen_Size",
+        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
+        color: gfx::TextureSampler<f32> = "t_Color",
+        out_color: gfx::BlendTarget<gfx::format::Rgba8> = ("o_Color", gfx::state::MASK_ALL, gfx::preset::blend::ALPHA),
     });
 }
-use shader_structs::{Vertex, ShaderParams};
+use shader_structs::{Vertex, pipe};
 
 const VERTEX_SRC: &'static [u8] = b"
     #version 150 core
