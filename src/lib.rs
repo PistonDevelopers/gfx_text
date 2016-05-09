@@ -34,6 +34,7 @@ extern crate freetype;
 use std::cmp::max;
 use std::marker::PhantomData;
 use gfx::{CombinedError, CommandBuffer, Encoder, Factory, PipelineStateError, Resources, UpdateError};
+use gfx::shade::ProgramError;
 use gfx::handle::{Buffer, RenderTargetView};
 use gfx::pso::PipelineState;
 use gfx::tex;
@@ -66,6 +67,8 @@ pub enum Error {
     FontError(FontError),
     /// Pipeline creation/update error
     PipelineError(PipelineStateError),
+    /// Program shader error.
+    ProgramError(ProgramError),
     /// An error occuring during creation of texture or resource view
     CombinedError(CombinedError),
     /// An error occuring in buffer/texture updates
@@ -100,6 +103,10 @@ impl From<FontError> for Error {
 
 impl From<PipelineStateError> for Error {
     fn from(e: PipelineStateError) -> Error { Error::PipelineError(e) }
+}
+
+impl From<ProgramError> for Error {
+    fn from(e: ProgramError) -> Error { Error::ProgramError(e) }
 }
 
 impl From<CombinedError> for Error {
@@ -253,10 +260,11 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
                                   tex::WrapMode::Clamp)
         );
 
-        let pso = try!(self.factory.create_pipeline_simple(
-            VERTEX_SRC,
-            FRAGMENT_SRC,
-            gfx::state::CullFace::Back,
+        let shaders = try!(self.factory.create_shader_set(VERTEX_SRC, FRAGMENT_SRC));
+        let pso = try!(self.factory.create_pipeline_state(
+            &shaders,
+            gfx::Primitive::TriangleList,
+            gfx::state::Rasterizer::new_fill().with_cull_back(),
             pipe::new()
         ));
 
@@ -442,7 +450,13 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         try!(encoder.update_buffer(&self.index_buffer, &self.index_data, 0));
 
         let ni = self.index_data.len() as gfx::VertexCount;
-        let mut slice: gfx::Slice<R> = self.index_buffer.clone().into();
+        let mut slice: gfx::Slice<R> = gfx::Slice {
+            base_vertex: 0,
+            start: 0,
+            end: self.index_buffer.len() as u32,
+            instances: None,
+            buffer: gfx::IndexBuffer::Index32(self.index_buffer.clone()),
+        };
         slice.end = ni;
 
         let data = pipe::Data {
