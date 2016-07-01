@@ -32,6 +32,7 @@ extern crate gfx;
 extern crate freetype;
 
 use std::cmp::max;
+use std::collections::hash_map::{Entry, HashMap};
 use std::marker::PhantomData;
 use gfx::{CombinedError, CommandBuffer, Encoder, Factory, PipelineStateError, Resources, UpdateError};
 use gfx::shade::ProgramError;
@@ -122,7 +123,8 @@ type IndexT = u32;
 /// Text renderer.
 pub struct Renderer<R: Resources, F: Factory<R>> {
     factory: F,
-    pso: PipelineState<R, pipe::Meta>,
+    pso_map: HashMap<gfx::format::Format, PipelineState<R, pipe::Meta>>,
+    shaders: gfx::ShaderSet<R>,
     vertex_data: Vec<Vertex>,
     vertex_buffer: Buffer<R, Vertex>,
     index_data: Vec<IndexT>,
@@ -261,16 +263,11 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
         );
 
         let shaders = try!(self.factory.create_shader_set(VERTEX_SRC, FRAGMENT_SRC));
-        let pso = try!(self.factory.create_pipeline_state(
-            &shaders,
-            gfx::Primitive::TriangleList,
-            gfx::state::Rasterizer::new_fill().with_cull_back(),
-            pipe::new()
-        ));
 
         Ok(Renderer {
             factory: self.factory,
-            pso: pso,
+            pso_map: HashMap::new(),
+            shaders: shaders,
             vertex_data: Vec::new(),
             vertex_buffer: vertex_buffer,
             index_data: Vec::new(),
@@ -287,6 +284,25 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
 }
 
 impl<R: Resources, F: Factory<R>> Renderer<R, F> {
+    fn prepare_pso(&mut self, format: gfx::format::Format) -> Result<(), Error> {
+        Ok(if let Entry::Vacant(e) = self.pso_map.entry(format) {
+            let init = pipe::Init {
+                vbuf: (),
+                screen_size: "u_Screen_Size",
+                proj: "u_Proj",
+                color: "t_Color",
+                out_color: ("o_Color", format, gfx::state::MASK_ALL, Some(gfx::preset::blend::ALPHA)),
+            };
+            let pso = try!(self.factory.create_pipeline_state(
+                &self.shaders,
+                gfx::Primitive::TriangleList,
+                gfx::state::Rasterizer::new_fill().with_cull_back(),
+                init
+            ));
+            e.insert(pso);
+        })
+    }
+
     /// Add some text to the current draw scene relative to the top left corner
     /// of the screen using pixel coordinates.
     pub fn add(&mut self, text: &str, pos: [i32; 2], color: [f32; 4]) {
@@ -404,10 +420,10 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// text.add("Test2", [20, 20], [0.0, 1.0, 0.0, 1.0]);
     /// text.draw(&mut encoder, &color_output).unwrap();
     /// ```
-    pub fn draw<C: CommandBuffer<R>>(
+    pub fn draw<C: CommandBuffer<R>, T: gfx::format::RenderFormat>(
         &mut self,
         encoder: &mut Encoder<R, C>,
-        target: &RenderTargetView<R, gfx::format::Rgba8>
+        target: &RenderTargetView<R, T>
     ) -> Result<(), Error> {
         self.draw_at(encoder, target, DEFAULT_PROJECTION)
     }
@@ -421,12 +437,14 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
     /// text.add_at("Test2", [0.0, 5.0, 0.0], [0.0, 1.0, 0.0, 1.0]);
     /// text.draw_at(&mut encoder, &color_output, camera_projection).unwrap();
     /// ```
-    pub fn draw_at<C: CommandBuffer<R>>(
+    pub fn draw_at<C: CommandBuffer<R>, T: gfx::format::RenderFormat>(
         &mut self,
         encoder: &mut Encoder<R, C>,
-        target: &RenderTargetView<R, gfx::format::Rgba8>,
+        target: &RenderTargetView<R, T>,
         proj: [[f32; 4]; 4]
     ) -> Result<(), Error> {
+        use gfx::Typed;
+
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
         let ind_len = self.index_data.len();
@@ -467,14 +485,17 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
                 [w as f32, h as f32]
             },
             color: self.color.clone(),
-            out_color: target.clone(),
+            out_color: target.raw().clone(),
         };
+
+        try!(self.prepare_pso(T::get_format()));
+        let pso = &self.pso_map[&T::get_format()];
 
         // Clear state.
         self.vertex_data.clear();
         self.index_data.clear();
 
-        encoder.draw(&slice, &self.pso, &data);
+        encoder.draw(&slice, pso, &data);
         Ok(())
     }
 
@@ -543,12 +564,12 @@ mod shader_structs {
         color: [f32; 4] = "a_Color",
     });
 
-    gfx_pipeline!( pipe {
-        vbuf: gfx::VertexBuffer<Vertex> = (),
-        screen_size: gfx::Global<[f32; 2]> = "u_Screen_Size",
-        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
-        color: gfx::TextureSampler<f32> = "t_Color",
-        out_color: gfx::BlendTarget<gfx::format::Rgba8> = ("o_Color", gfx::state::MASK_ALL, gfx::preset::blend::ALPHA),
+    gfx_pipeline_base!( pipe {
+        vbuf: gfx::VertexBuffer<Vertex>,
+        screen_size: gfx::Global<[f32; 2]>,
+        proj: gfx::Global<[[f32; 4]; 4]>,
+        color: gfx::TextureSampler<f32>,
+        out_color: gfx::RawRenderTarget,
     });
 }
 use shader_structs::{Vertex, pipe};
