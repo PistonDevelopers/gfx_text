@@ -565,11 +565,11 @@ mod shader_structs {
     });
 
     gfx_pipeline_base!( pipe {
-        vbuf: gfx::VertexBuffer<Vertex>,
-        screen_size: gfx::Global<[f32; 2]>,
-        proj: gfx::Global<[[f32; 4]; 4]>,
-        color: gfx::TextureSampler<f32>,
-        out_color: gfx::RawRenderTarget,
+        vbuf: ::gfx::VertexBuffer<Vertex>,
+        screen_size: ::gfx::Global<[f32; 2]>,
+        proj: ::gfx::Global<[[f32; 4]; 4]>,
+        color: ::gfx::TextureSampler<f32>,
+        out_color: ::gfx::RawRenderTarget,
     });
 }
 use shader_structs::{Vertex, pipe};
