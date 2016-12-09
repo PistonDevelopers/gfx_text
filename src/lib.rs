@@ -555,6 +555,8 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
 
 // Hack to hide shader structs from the library user.
 mod shader_structs {
+    extern crate gfx;
+
     gfx_vertex_struct!( Vertex {
         pos: [f32; 2] = "a_Pos",
         tex: [f32; 2] = "a_TexCoord",
