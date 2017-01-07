@@ -38,7 +38,7 @@ use gfx::{CombinedError, CommandBuffer, Encoder, Factory, PipelineStateError, Re
 use gfx::shade::ProgramError;
 use gfx::handle::{Buffer, RenderTargetView};
 use gfx::pso::PipelineState;
-use gfx::tex;
+use gfx::texture;
 use gfx::traits::FactoryExt;
 mod font;
 use font::BitmapFont;
@@ -67,7 +67,7 @@ pub enum Error {
     /// Font loading error
     FontError(FontError),
     /// Pipeline creation/update error
-    PipelineError(PipelineStateError),
+    PipelineError(PipelineStateError<String>),
     /// Program shader error.
     ProgramError(ProgramError),
     /// An error occuring during creation of texture or resource view
@@ -102,8 +102,8 @@ impl From<FontError> for Error {
     fn from(e: FontError) -> Error { Error::FontError(e) }
 }
 
-impl From<PipelineStateError> for Error {
-    fn from(e: PipelineStateError) -> Error { Error::PipelineError(e) }
+impl From<PipelineStateError<String>> for Error {
+    fn from(e: PipelineStateError<String>) -> Error { Error::PipelineError(e) }
 }
 
 impl From<ProgramError> for Error {
@@ -230,12 +230,12 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     pub fn build(mut self) -> Result<Renderer<R, F>, Error> {
         let vertex_buffer = self.factory.create_buffer_dynamic(
             self.buffer_size,
-            gfx::BufferRole::Vertex,
+            gfx::buffer::Role::Vertex,
             gfx::Bind::empty()
         ).expect("Could not create vertex buffer");
         let index_buffer = self.factory.create_buffer_dynamic(
             self.buffer_size,
-            gfx::BufferRole::Index,
+            gfx::buffer::Role::Index,
             gfx::Bind::empty()
         ).expect("Count not create index buffer");
 
@@ -258,8 +258,8 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
             font_bitmap.get_image(),
         ));
         let sampler = self.factory.create_sampler(
-            tex::SamplerInfo::new(tex::FilterMethod::Bilinear,
-                                  tex::WrapMode::Clamp)
+            texture::SamplerInfo::new(texture::FilterMethod::Bilinear,
+                                      texture::WrapMode::Clamp)
         );
 
         let shaders = try!(self.factory.create_shader_set(VERTEX_SRC, FRAGMENT_SRC));
@@ -443,7 +443,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         target: &RenderTargetView<R, T>,
         proj: [[f32; 4]; 4]
     ) -> Result<(), Error> {
-        use gfx::Typed;
+        use gfx::memory::Typed;
 
         let ver_len = self.vertex_data.len();
         let ver_buf_len = self.vertex_buffer.len();
@@ -454,13 +454,13 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         if ver_len > ver_buf_len {
             let len = grow_buffer_size(ver_buf_len, ver_len);
             self.vertex_buffer = self.factory.create_buffer_dynamic(
-                    len, gfx::BufferRole::Vertex, gfx::Bind::empty()
+                    len, gfx::buffer::Role::Vertex, gfx::Bind::empty()
                 ).expect("Could not reallocate vertex buffer");
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
             self.index_buffer = self.factory.create_buffer_dynamic(
-                    len, gfx::BufferRole::Index, gfx::Bind::empty()
+                    len, gfx::buffer::Role::Index, gfx::Bind::empty()
                 ).expect("Could not reallocate index buffer");
         }
 
@@ -546,9 +546,9 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
     height: u16,
     data: &[u8],
 ) -> Result<gfx::handle::ShaderResourceView<R, f32>, CombinedError> {
-    let kind = tex::Kind::D2(width, height, tex::AaMode::Single);
+    let kind = texture::Kind::D2(width, height, texture::AaMode::Single);
     let (_, texture_view) = try!(
-        factory.create_texture_const::<(gfx::format::R8, gfx::format::Unorm)>(kind, &[data])
+        factory.create_texture_immutable_u8::<(gfx::format::R8, gfx::format::Unorm)>(kind, &[data])
     );
     Ok(texture_view)
 }

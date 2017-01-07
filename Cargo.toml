@@ -11,7 +11,7 @@ repository = "https://github.com/PistonDevelopers/gfx_text.git"
 documentation = "http://docs.piston.rs/gfx_text/gfx_text/"
 
 [dependencies]
-gfx = "0.12.2"
+gfx = "0.13.0"
 freetype-rs = "0.11"
 
 [features]
@@ -21,7 +21,10 @@ include-font = []
 ### For examples
 
 [dev-dependencies]
-gfx_window_glutin = "0.12"
-glutin = "0.6"
+piston = "0.26.0"
+pistoncore-glutin_window = "0.31.0"
+gfx_device_gl = "0.12.0"
+shader_version = "0.2.1"
+glutin = "0.6.2"
 #log = "*"
 #env_logger = "*"
