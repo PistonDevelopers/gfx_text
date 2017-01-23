@@ -229,15 +229,18 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
     /// Build a new text renderer instance using current settings.
     pub fn build(mut self) -> Result<Renderer<R, F>, Error> {
         use gfx::buffer;
+        use gfx::memory;
 
-        let vertex_buffer = self.factory.create_buffer_dynamic(
+        let vertex_buffer = self.factory.create_buffer(
             self.buffer_size,
             buffer::Role::Vertex,
+            memory::Usage::Dynamic,
             gfx::Bind::empty()
         ).expect("Could not create vertex buffer");
-        let index_buffer = self.factory.create_buffer_dynamic(
+        let index_buffer = self.factory.create_buffer(
             self.buffer_size,
             buffer::Role::Index,
+            memory::Usage::Dynamic,
             gfx::Bind::empty()
         ).expect("Count not create index buffer");
 
@@ -445,7 +448,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         target: &RenderTargetView<R, T>,
         proj: [[f32; 4]; 4]
     ) -> Result<(), Error> {
-        use gfx::memory::Typed;
+        use gfx::memory::{self, Typed};
         use gfx::buffer;
 
         let ver_len = self.vertex_data.len();
@@ -456,14 +459,14 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         // Reallocate buffers if there is no enough space for data.
         if ver_len > ver_buf_len {
             let len = grow_buffer_size(ver_buf_len, ver_len);
-            self.vertex_buffer = self.factory.create_buffer_dynamic(
-                    len, buffer::Role::Vertex, gfx::Bind::empty()
+            self.vertex_buffer = self.factory.create_buffer(
+                    len, buffer::Role::Vertex, memory::Usage::Dynamic, gfx::Bind::empty()
                 ).expect("Could not reallocate vertex buffer");
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
-            self.index_buffer = self.factory.create_buffer_dynamic(
-                    len, buffer::Role::Index, gfx::Bind::empty()
+            self.index_buffer = self.factory.create_buffer(
+                    len, buffer::Role::Index, memory::Usage::Dynamic, gfx::Bind::empty()
                 ).expect("Could not reallocate index buffer");
         }
 
