@@ -4,7 +4,7 @@ extern crate gfx_window_glutin;
 extern crate glutin;
 extern crate gfx_text;
 
-use gfx::traits::Device;
+use gfx::Device;
 use gfx_window_glutin as gfxw;
 use gfx_text::{HorizontalAnchor, VerticalAnchor};
 use glutin::{WindowBuilder, Event, VirtualKeyCode, GL_CORE};
