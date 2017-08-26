@@ -7,7 +7,11 @@ extern crate gfx_text;
 use gfx::Device;
 use gfx_window_glutin as gfxw;
 use gfx_text::{HorizontalAnchor, VerticalAnchor};
-use glutin::{WindowBuilder, Event, VirtualKeyCode, GL_CORE};
+use glutin::{
+    GlContext, WindowBuilder, Event, VirtualKeyCode,
+    WindowEvent, KeyboardInput, EventsLoop,
+    GL_CORE
+};
 
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BROWN: [f32; 4] = [0.65, 0.16, 0.16, 1.0];
@@ -18,12 +22,14 @@ const FONT_PATH: &'static str = "examples/assets/Ubuntu-R.ttf";
 fn main() {
     // env_logger::init().unwrap();
 
+    let mut events_loop = EventsLoop::new();
+    let context = glutin::ContextBuilder::new()
+        .with_gl(GL_CORE);
     let (window, mut device, mut factory, main_color, _) = {
         let builder = WindowBuilder::new()
             .with_dimensions(640, 480)
-            .with_title(format!("gfx_text example"))
-            .with_gl(GL_CORE);
-        gfxw::init::<gfx::format::Rgba8, gfx::format::Depth>(builder)
+            .with_title(format!("gfx_text example"));
+        gfxw::init::<gfx::format::Rgba8, gfx::format::Depth>(builder, context, &events_loop)
     };
     let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
@@ -35,15 +41,36 @@ fn main() {
         .unwrap();
 
     let mut counter: u32 = 0;
+    let mut exit = false;
 
     'main: loop {
-        for event in window.poll_events() {
+        events_loop.poll_events(|event| {
             match event {
-                Event::Closed => break 'main,
-                Event::KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) => break 'main,
+                Event::WindowEvent {
+                    event: WindowEvent::Closed,
+                    ..
+                } => {
+                    exit = true;
+                    return;
+                }
+                Event::WindowEvent {
+                    event: WindowEvent::KeyboardInput {
+                        input: KeyboardInput {
+                            virtual_keycode: Some(VirtualKeyCode::Escape),
+                            ..
+                        },
+                        ..
+                    },
+                    ..
+                } => {
+                    exit = true;
+                    return;
+                }
                 _ => {},
             }
-        }
+        });
+
+        if exit {break 'main;}
 
         counter += 1;
 
