@@ -67,7 +67,7 @@ impl BitmapFont {
     fn get_all_face_chars<'a>(face: &mut Face<'a>) -> HashSet<char> {
         let mut result = HashSet::new();
         let mut index = 0;
-        let mut face_ptr = face.raw_mut();
+        let face_ptr = face.raw_mut();
         unsafe {
             let mut code = ft::ffi::FT_Get_First_Char(face_ptr, &mut index);
             while index != 0 {
