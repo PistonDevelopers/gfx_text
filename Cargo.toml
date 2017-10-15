@@ -1,6 +1,6 @@
 [package]
 name = "gfx_text"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["Kagami Hiiragi <kagami@genshiken.org>"]
 description = "Draw text for gfx using freetype."
 keywords = ["gfx", "graphics", "text", "freetype", "font"]
@@ -12,7 +12,7 @@ documentation = "http://docs.piston.rs/gfx_text/gfx_text/"
 
 [dependencies]
 gfx = "0.16.0"
-freetype-rs = "0.15"
+freetype-rs = "0.16"
 
 [features]
 default = ["include-font"]

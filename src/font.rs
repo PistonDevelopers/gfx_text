@@ -158,7 +158,7 @@ impl BitmapFont {
         // debug!("Start building the bitmap (chars: {})", chars_len);
 
         for ch in needed_chars {
-            try!(face.load_char(ch as usize, ft::face::RENDER));
+            try!(face.load_char(ch as usize, ft::face::LoadFlag::RENDER));
             let glyph = face.glyph();
             let bitmap = glyph.bitmap();
             let ch_width = bitmap.width();
