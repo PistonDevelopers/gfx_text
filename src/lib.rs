@@ -235,13 +235,13 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
             self.buffer_size,
             buffer::Role::Vertex,
             memory::Usage::Dynamic,
-            gfx::Bind::empty()
+            memory::Bind::empty()
         ).expect("Could not create vertex buffer");
         let index_buffer = self.factory.create_buffer(
             self.buffer_size,
             buffer::Role::Index,
             memory::Usage::Dynamic,
-            gfx::Bind::empty()
+            memory::Bind::empty()
         ).expect("Count not create index buffer");
 
         // Initialize bitmap font.
@@ -296,7 +296,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
                 screen_size: "u_Screen_Size",
                 proj: "u_Proj",
                 color: "t_Color",
-                out_color: ("o_Color", format, gfx::state::MASK_ALL, Some(gfx::preset::blend::ALPHA)),
+                out_color: ("o_Color", format, gfx::state::ColorMask::all(), Some(gfx::preset::blend::ALPHA)),
             };
             let pso = try!(self.factory.create_pipeline_state(
                 &self.shaders,
@@ -460,13 +460,13 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         if ver_len > ver_buf_len {
             let len = grow_buffer_size(ver_buf_len, ver_len);
             self.vertex_buffer = self.factory.create_buffer(
-                    len, buffer::Role::Vertex, memory::Usage::Dynamic, gfx::Bind::empty()
+                    len, buffer::Role::Vertex, memory::Usage::Dynamic, memory::Bind::empty()
                 ).expect("Could not reallocate vertex buffer");
         }
         if ind_len > ind_buf_len {
             let len = grow_buffer_size(ind_buf_len, ind_len);
             self.index_buffer = self.factory.create_buffer(
-                    len, buffer::Role::Index, memory::Usage::Dynamic, gfx::Bind::empty()
+                    len, buffer::Role::Index, memory::Usage::Dynamic, memory::Bind::empty()
                 ).expect("Could not reallocate index buffer");
         }
 
@@ -554,7 +554,8 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
 ) -> Result<gfx::handle::ShaderResourceView<R, f32>, CombinedError> {
     let kind = texture::Kind::D2(width, height, texture::AaMode::Single);
     let (_, texture_view) = try!(
-        factory.create_texture_immutable_u8::<(gfx::format::R8, gfx::format::Unorm)>(kind, &[data])
+        factory.create_texture_immutable_u8::<(gfx::format::R8, gfx::format::Unorm)>(
+            kind, texture::Mipmap::Provided, &[data])
     );
     Ok(texture_view)
 }
