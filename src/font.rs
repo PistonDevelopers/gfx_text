@@ -59,12 +59,14 @@ impl BitmapFont {
     }
 
     pub fn from_bytes(data: &[u8], font_size: u8, chars: Option<&[char]>) -> FontResult {
+        use std::rc::Rc;
+
         let library = try!(ft::Library::init());
-        let face = try!(library.new_memory_face(data, 0));
+        let face = try!(library.new_memory_face(Rc::new(data.into()), 0));
         Self::new(face, font_size, chars)
     }
 
-    fn get_all_face_chars<'a>(face: &mut Face<'a>) -> HashSet<char> {
+    fn get_all_face_chars(face: &mut Face) -> HashSet<char> {
         let mut result = HashSet::new();
         let mut index = 0;
         let face_ptr = face.raw_mut();
@@ -85,7 +87,7 @@ impl BitmapFont {
     // overflows.
     /// Construct new BitMap font using provided parameters (this is general
     /// method, called via `from_` helpers).
-    fn new<'a>(mut face: ft::Face<'a>, font_size: u8, chars: Option<&[char]>) -> FontResult {
+    fn new(mut face: ft::Face, font_size: u8, chars: Option<&[char]>) -> FontResult {
         let needed_chars = chars
             .map(|sl| HashSet::from_iter(sl.iter().cloned()))
             .unwrap_or_else(|| Self::get_all_face_chars(&mut face));
