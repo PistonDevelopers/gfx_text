@@ -16,6 +16,7 @@ pub struct BitmapFont {
     height: u16,
     chars: HashMap<char, BitmapChar>,
     image: Vec<u8>,
+    font_height: u16,
 }
 
 #[derive(Debug)]
@@ -277,6 +278,7 @@ impl BitmapFont {
             height: image_height as u16,
             chars: chars_info,
             image: image,
+            font_height: (face.size_metrics().unwrap().height >> 6) as u16,
         })
     }
 
@@ -291,6 +293,10 @@ impl BitmapFont {
     /// Return 8-bit texture raw data (grayscale).
     pub fn get_image(&self) -> &[u8] {
         &self.image
+    }
+
+    pub fn get_font_height(&self) -> u16 {
+        self.font_height
     }
 
     pub fn find_char(&self, ch: char) -> Option<&BitmapChar> {

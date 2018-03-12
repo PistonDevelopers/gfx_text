@@ -31,7 +31,6 @@
 extern crate gfx;
 extern crate freetype;
 
-use std::cmp::max;
 use std::collections::hash_map::{Entry, HashMap};
 use std::marker::PhantomData;
 use gfx::{CombinedError, CommandBuffer, Encoder, Factory, PipelineStateError, Resources, UpdateError};
@@ -505,13 +504,9 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
         Ok(())
     }
 
-    // TODO: Currently reports height based on the tallest glyph in the string.
-    // It might be more useful to go by the tallest in the whole font to avoid
-    // text jumping around as it changes.
     /// Get the bounding box size of a string as rendered by this font.
     pub fn measure(&self, text: &str) -> (i32, i32) {
         let mut width = 0;
-        let mut height = 0;
         let mut last_char = None;
 
         for ch in text.chars() {
@@ -522,7 +517,6 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
             last_char = Some(ch_info);
 
             width += ch_info.x_advance;
-            height = max(height, ch_info.y_offset + ch_info.height);
         }
 
         match last_char {
@@ -530,7 +524,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
             None => (),
         }
 
-        (width, height)
+        (width, self.font_bitmap.get_font_height() as i32)
     }
 }
 
