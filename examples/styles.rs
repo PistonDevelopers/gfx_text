@@ -27,7 +27,7 @@ fn main() {
         .with_gl(GL_CORE);
     let (window, mut device, mut factory, main_color, _) = {
         let builder = WindowBuilder::new()
-            .with_dimensions(640, 480)
+            .with_dimensions((640, 480).into())
             .with_title(format!("gfx_text example"));
         gfxw::init::<gfx::format::Rgba8, gfx::format::Depth>(builder, context, &events_loop)
     };
@@ -47,7 +47,7 @@ fn main() {
         events_loop.poll_events(|event| {
             match event {
                 Event::WindowEvent {
-                    event: WindowEvent::Closed,
+                    event: WindowEvent::CloseRequested,
                     ..
                 } => {
                     exit = true;
