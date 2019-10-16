@@ -8,7 +8,7 @@ use gfx::Device;
 use gfx_window_glutin as gfxw;
 use gfx_text::{HorizontalAnchor, VerticalAnchor};
 use glutin::{
-    GlContext, WindowBuilder, Event, VirtualKeyCode,
+    WindowBuilder, Event, VirtualKeyCode,
     WindowEvent, KeyboardInput, EventsLoop,
     GL_CORE
 };
@@ -29,7 +29,7 @@ fn main() {
         let builder = WindowBuilder::new()
             .with_dimensions((640, 480).into())
             .with_title(format!("gfx_text example"));
-        gfxw::init::<gfx::format::Rgba8, gfx::format::Depth>(builder, context, &events_loop)
+        gfxw::init::<gfx::format::Rgba8, gfx::format::Depth>(builder, context, &events_loop).unwrap()
     };
     let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
