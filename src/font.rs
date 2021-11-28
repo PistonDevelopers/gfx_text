@@ -54,16 +54,16 @@ pub type FontResult = Result<BitmapFont, FontError>;
 
 impl BitmapFont {
     pub fn from_path(path: &str, font_size: u8, chars: Option<&[char]>) -> FontResult {
-        let library = try!(ft::Library::init());
-        let face = try!(library.new_face(path, 0));
+        let library = ft::Library::init()?;
+        let face = library.new_face(path, 0)?;
         Self::new(face, font_size, chars)
     }
 
     pub fn from_bytes(data: &[u8], font_size: u8, chars: Option<&[char]>) -> FontResult {
         use std::rc::Rc;
 
-        let library = try!(ft::Library::init());
-        let face = try!(library.new_memory_face(Rc::new(data.into()), 0));
+        let library = ft::Library::init()?;
+        let face = library.new_memory_face(Rc::new(data.into()), 0)?;
         Self::new(face, font_size, chars)
     }
 
@@ -96,7 +96,7 @@ impl BitmapFont {
             return Err(FontError::EmptyFont);
         }
 
-        try!(face.set_pixel_sizes(0, font_size as u32));
+        face.set_pixel_sizes(0, font_size as u32)?;
 
         // FreeType representation of rendered glyph 'j':
         //
@@ -161,7 +161,7 @@ impl BitmapFont {
         // debug!("Start building the bitmap (chars: {})", chars_len);
 
         for ch in needed_chars {
-            try!(face.load_char(ch as usize, ft::face::LoadFlag::RENDER));
+            face.load_char(ch as usize, ft::face::LoadFlag::RENDER)?;
             let glyph = face.glyph();
             let bitmap = glyph.bitmap();
             let ch_width = bitmap.width();
