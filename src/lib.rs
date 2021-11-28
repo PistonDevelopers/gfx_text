@@ -247,26 +247,26 @@ impl<'r, R: Resources, F: Factory<R>> RendererBuilder<'r, R, F> {
         // TODO(Kagami): Outline!
         // TODO(Kagami): More granulated font settings, e.g. antialiasing,
         // hinting, kerning, etc.
-        let font_bitmap = try!(match self.font_path {
+        let font_bitmap = match self.font_path {
             Some(path) =>
                 BitmapFont::from_path(path, self.font_size, self.chars),
             None => match self.font_data {
                 Some(data) => BitmapFont::from_bytes(data, self.font_size, self.chars),
                 None => Err(FontError::NoFont),
             },
-        });
-        let font_texture = try!(create_texture_r8_static(
+        }?;
+        let font_texture = create_texture_r8_static(
             &mut self.factory,
             font_bitmap.get_width(),
             font_bitmap.get_height(),
             font_bitmap.get_image(),
-        ));
+        )?;
         let sampler = self.factory.create_sampler(
             texture::SamplerInfo::new(texture::FilterMethod::Bilinear,
                                   texture::WrapMode::Clamp)
         );
 
-        let shaders = try!(self.factory.create_shader_set(VERTEX_SRC, FRAGMENT_SRC));
+        let shaders = self.factory.create_shader_set(VERTEX_SRC, FRAGMENT_SRC)?;
 
         Ok(Renderer {
             factory: self.factory,
@@ -297,12 +297,12 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
                 color: "t_Color",
                 out_color: ("o_Color", format, gfx::state::ColorMask::all(), Some(gfx::preset::blend::ALPHA)),
             };
-            let pso = try!(self.factory.create_pipeline_state(
+            let pso = self.factory.create_pipeline_state(
                 &self.shaders,
                 gfx::Primitive::TriangleList,
                 gfx::state::Rasterizer::new_fill().with_cull_back(),
                 init
-            ));
+            )?;
             e.insert(pso);
         })
     }
@@ -469,8 +469,8 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
                 ).expect("Could not reallocate index buffer");
         }
 
-        try!(encoder.update_buffer(&self.vertex_buffer, &self.vertex_data, 0));
-        try!(encoder.update_buffer(&self.index_buffer, &self.index_data, 0));
+        encoder.update_buffer(&self.vertex_buffer, &self.vertex_data, 0)?;
+        encoder.update_buffer(&self.index_buffer, &self.index_data, 0)?;
 
         let ni = self.index_data.len() as gfx::VertexCount;
         let mut slice: gfx::Slice<R> = gfx::Slice {
@@ -493,7 +493,7 @@ impl<R: Resources, F: Factory<R>> Renderer<R, F> {
             out_color: target.raw().clone(),
         };
 
-        try!(self.prepare_pso(T::get_format()));
+        self.prepare_pso(T::get_format())?;
         let pso = &self.pso_map[&T::get_format()];
 
         // Clear state.
@@ -547,10 +547,9 @@ fn create_texture_r8_static<R: Resources, F: Factory<R>>(
     data: &[u8],
 ) -> Result<gfx::handle::ShaderResourceView<R, f32>, CombinedError> {
     let kind = texture::Kind::D2(width, height, texture::AaMode::Single);
-    let (_, texture_view) = try!(
+    let (_, texture_view) =
         factory.create_texture_immutable_u8::<(gfx::format::R8, gfx::format::Unorm)>(
-            kind, texture::Mipmap::Provided, &[data])
-    );
+            kind, texture::Mipmap::Provided, &[data])?;
     Ok(texture_view)
 }
 
