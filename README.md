@@ -1,5 +1,7 @@
 # gfx_text [![Build Status](https://travis-ci.org/PistonDevelopers/gfx_text.png?branch=master)](https://travis-ci.org/PistonDevelopers/gfx_text) [![crates.io](https://img.shields.io/crates/v/gfx_text.svg)](https://crates.io/crates/gfx_text)
 
+[DEPRECATED]
+
 Library for drawing text for [gfx-rs](https://github.com/gfx-rs/gfx-rs) graphics API. Uses [freetype-rs](https://github.com/PistonDevelopers/freetype-rs) underneath.
 
 ## Usage
